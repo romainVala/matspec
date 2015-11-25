@@ -51,10 +51,16 @@ fid = concatenate_fid(fid);
 
  
 %******************** PRE-PROCESSING ****************
-%you will recognise here part of your original code whith the
-%processing_MEGA function which does frequency shift and phase corection on
-%each spectra 
-par = processing_MEGA;
+% sometime if to few SNR in sigle spectra you may want to sum spectra (n by
+% n in a sliding window for exemple n=4
+new_fid = sum_fid_local(fid,4);
+%or if you work with MEGA spectra
+new_fid = sum_fid_local_mega(fid,4);
+
+%% Frequency and Phase correction
+
+%processing_MEGA function which does frequency shift and phase corection on each spectra 
+par = processing_MEGA;  %to get default parameters
 fid_cor = processing_MEGA(fid,par);       
 
 %For single spectra (whithout editing) use 
@@ -73,6 +79,9 @@ par.mean_line_broadening=3;
 par.ref_metab = 'CRE_SMALL2'; % default is CRE_SMALL2 this define the
 % reference peak to do the frequency corection on (ref uper and lower bound)
 % different value can be easily added in spect_processing/get_peak_bound.m 
+% if you want to define it manyally use
+par.ref_metab = 'USER';  par.METAB_inf=2.8;  par.METAB_sup=3.2 ; par.METAB_ref = 2.02;
+
 
 %par.correct_freq_mod ='abs';  %default is 'real'
 %par.do_phase_cor=0; % 0 will not perform phase corection; default 1
@@ -81,6 +90,7 @@ par.figure=0; % will not display result (corection and the mean difference spect
 par.mean_line_broadening = 1; % the line broadening aplied before
 %frequency corection (it is not apply to fid of the end result it is just
 %applied to find the max at a given ppm. default  0 
+%see help in processing_spec for more details
 
 
 %do it again for the water reference scan

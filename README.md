@@ -12,4 +12,7 @@ _ lcmodel preparation of .CONTROL file
 
 _ lcmodel results read to write csv output files
 
+To have a first overview of command to use, read script exemple : doit.m
+
+
 Unfurtunatly this is still a poorly documented code ...
