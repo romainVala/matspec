@@ -1,21 +1,12 @@
-function [spec_cor] = processing_MEGA(spec_info,par)
+function [spec_cor] = processing_MEGA(fid_struct,par)
 %function [dif_fids fid_cor phase_cor freq_cor] = processing_MEGA(spec_info,par)
-% matlab software to read in and process siemens spectroscopy data acquired using MEGA-PRESS sequence
+% see the help in processing_spec, the same struct par is used with the
+% same option
+%
+% Romain (Oct 2007) : change the input parameters, to take a cell array of fid and
 % written by Malgorzata Marjanska with help from Julien Valette and Eddie Auerbach
 % september 17, 2007
-% other small programs used: spec_read, spec_read_all, parse_siemens_shadow (c_str.m, parse_mrprot.m), add_array_scans (cout_nu.m, cout_phase.m),
-% add_array_scans_bis_Cre, createrawfile_mm_3T_CENIR.m
-% final data is saved either as .mat (matlab format) or .RAW (LCModel format)
 
-% flag_toolbox = 'y' - add_array_scans is used and toolbox with lsqnonlin to perform frequency and phase correction
-%		'n' - add_array_scans_bis_Cre is used, and frequency and phase corrections are based on Cre peak
-% red - original data, blue - data after correction
-
-
-% reading in data and parameters
-
-% Romain (Oct 2007) : change the input parameters, to take a cell array of fid and
-% spec_info the read of dicom file is done in explore_spectro_data.m
 
 if ~exist('par'), par='';end
 
@@ -44,20 +35,20 @@ end
 
 flag_toolbox = 'n';
 
-spec_cor = spec_info;
+spec_cor = fid_struct;
 
-for nb_spec = 1:length(spec_info)
+for nb_spec = 1:length(fid_struct)
     
-    ppm_center = spec_info(nb_spec).spectrum.ppm_center;	% receiver (4.7 ppm)
-    magfield   = spec_info(nb_spec).spectrum.magfield;	% magnetic field (2.8936 T)
-    cenfreq    = spec_info(nb_spec).spectrum.cenfreq;	% center frequency of acquisition in Hz
-    SW_h       = spec_info(nb_spec).spectrum.SW_h;	% spectral width in Hz
-    SW_p       = spec_info(nb_spec).spectrum.SW_p;	% spectral width in ppm
-    np         = spec_info(nb_spec).spectrum.np;		% number of points
-    dw         = spec_info(nb_spec).spectrum.dw;		% dwell time
+    ppm_center = fid_struct(nb_spec).spectrum.ppm_center;	% receiver (4.7 ppm)
+    magfield   = fid_struct(nb_spec).spectrum.magfield;	% magnetic field (2.8936 T)
+    cenfreq    = fid_struct(nb_spec).spectrum.cenfreq;	% center frequency of acquisition in Hz
+    SW_h       = fid_struct(nb_spec).spectrum.SW_h;	% spectral width in Hz
+    SW_p       = fid_struct(nb_spec).spectrum.SW_p;	% spectral width in ppm
+    np         = fid_struct(nb_spec).spectrum.np;		% number of points
+    dw         = fid_struct(nb_spec).spectrum.dw;		% dwell time
     zero_filling = np;
     
-    fid = spec_info(nb_spec).fid;
+    fid = fid_struct(nb_spec).fid;
     
     size_mid = size(fid,2)/2;
     %  fid2 = transpose(fid(:,1:size_mid));
@@ -71,7 +62,7 @@ for nb_spec = 1:length(spec_info)
         case 'max'
             if (par.process_diff_only)
                 
-                [sum2 fid2_cor phase_cor1 freq_cor1 ] = add_array_scans_bis_Cre((fid3-fid2),SW_h,SW_p,ppm_center,par,spec_info(nb_spec));
+                [sum2 fid2_cor phase_cor1 freq_cor1 ] = add_array_scans_bis_Cre((fid3-fid2),SW_h,SW_p,ppm_center,par,fid_struct(nb_spec));
                 
                 
                 pas_temps=1/SW_h;	% pas (en s) entre 2 points complexes successifs;
@@ -91,8 +82,8 @@ for nb_spec = 1:length(spec_info)
                 
             else
                 
-                [sum2 fid2_cor phase_cor1 freq_cor1 ] = add_array_scans_bis_Cre(fid2,SW_h,SW_p,ppm_center,par,spec_info(nb_spec));
-                [sum3 fid3_cor phase_cor2 freq_cor2 ] = add_array_scans_bis_Cre(fid3,SW_h,SW_p,ppm_center,par,spec_info(nb_spec));
+                [sum2 fid2_cor phase_cor1 freq_cor1 ] = add_array_scans_bis_Cre(fid2,SW_h,SW_p,ppm_center,par,fid_struct(nb_spec));
+                [sum3 fid3_cor phase_cor2 freq_cor2 ] = add_array_scans_bis_Cre(fid3,SW_h,SW_p,ppm_center,par,fid_struct(nb_spec));
                 %    fid_cor(nb_spec) = [transpose(fid2_cor) transpose(fid3_cor)];
 
                 spec_cor(nb_spec).fid = [permute(fid2_cor,[2 1]) permute(fid3_cor,[2 1])];
@@ -101,8 +92,8 @@ for nb_spec = 1:length(spec_info)
             
         case 'correlation'
             
-            [fid2_cor phase_cor1 freq_cor1 ] = correct_freq_and_phase_by_correlation(permute(fid2,[2 1]),par,spec_info(nb_spec));
-            [fid3_cor phase_cor2 freq_cor2 ] = correct_freq_and_phase_by_correlation(permute(fid3,[2 1]),par,spec_info(nb_spec));
+            [fid2_cor phase_cor1 freq_cor1 ] = correct_freq_and_phase_by_correlation(permute(fid2,[2 1]),par,fid_struct(nb_spec));
+            [fid3_cor phase_cor2 freq_cor2 ] = correct_freq_and_phase_by_correlation(permute(fid3,[2 1]),par,fid_struct(nb_spec));
             spec_cor(nb_spec).fid = [fid2_cor , fid3_cor];
             sum2=permute(sum(fid2_cor,2),[2 1]);sum3=permute(sum(fid3_cor,2),[2 1]);
             
