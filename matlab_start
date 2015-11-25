@@ -1,0 +1,18 @@
+export SPM=/usr/cenir/SPM/spm8
+
+export MATVOL=/home/romain/dvpt/matvol;
+
+specdir=/home/romain/dvpt/spectro/matspec
+
+export SPECT=${specdir}:${specdir}/readdicom:${specdir}/tools:${specdir}/spect_processing:${specdir}/anat_processing:${specdir}/lcmodel:${specdir}/plotting:${specdir}/lana_fit
+
+MATLABPATH=${SPM}:${MATVOL}:${SPECT}:${MATLABPATH}
+export MATLABPATH
+#LD_LIBRARY_PATH=${SPM}:${LD_LIBRARY_PATH}
+#export LD_LIBRARY_PATH
+
+
+#the go.m will set the path for the matvol program
+
+exec matlab -r 'go'
+

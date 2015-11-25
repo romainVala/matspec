@@ -1,0 +1,2 @@
+sTXSPEC.asNucleusInfo[0].flReferenceAmplitude = 265.6
+
