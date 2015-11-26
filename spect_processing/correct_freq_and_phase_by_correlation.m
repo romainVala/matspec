@@ -68,6 +68,7 @@ end
 
 spec_total = mean(fftshift(fft(fid_cor),1),2);
 
+if par.do_phase_cor
 for scan=1:nt
     
     fid_metab0=squeeze(fid_cor(:,scan));
@@ -87,11 +88,21 @@ for scan=1:nt
     %    waitbar(count/NS);
     
 end
-
+else
+    phase_cor=zeros(1,nt);
+end
 
 %do a global freq
 if par.correct_to_ref_metab
-    fidm = permute(mean(fid_cor,2),[2 1]);
+    
+    %make the same lb and zero filling as for correlation
+    for jcal=1:nt
+        fidzf(:,jcal) = [fid_cor(:,jcal).*exp(-t*pi*LB-t.^2/(GF^2)); zeros(np*sifactor,1)];
+    end
+    
+    %fidm = permute(mean(fid_cor,2),[2 1]);
+    fidm = permute(mean(fidzf,2),[2 1]);
+    
     ppp=par;ppp.figure=0;
     [summ2 fiddddcor phh fffreq ] = add_array_scans_bis_Cre(fidm,sw,sw/sfrq1H,H1offset,ppp,info);
     Frequency_correction = Frequency_correction + fffreq(1);

@@ -20,6 +20,9 @@ if ~isfield(par,'do_freq_cor'), par.do_freq_cor=1;     end
 if ~isfield(par,'do_phase_cor'), par.do_phase_cor=1;     end
 if ~isfield(par,'correct_to_ref_metab'),par.correct_to_ref_metab =1; end
 
+if ~isfield(par,'correct_diff_phase'),par.correct_diff_phase =0; end
+
+
 if ~isfield(par,'figure'), par.figure=1;     end
 
 if ~isfield(par,'process_diff_only'), par.process_diff_only=0;     end
@@ -105,9 +108,11 @@ for nb_spec = 1:length(fid_struct)
     spec_cor(nb_spec).max_freq_shift = max(spec_cor(nb_spec).freq_cor) -min(spec_cor(nb_spec).freq_cor);
     
     
-    if flag_toolbox=='n'	& 0			% correction of phase of difference spectrum
-        
-        f_inf3=1.9; 		% lower bound for zero-phasing the SUM, in ppm
+    if par.correct_diff_phase 		% correction of phase of difference spectrum
+        dif_fid=sum3-sum2;
+         dif_fid0 = dif_fid;
+         
+        f_inf3=0; 		% lower bound for zero-phasing the SUM, in ppm
         f_sup3=4; 		% upper bound for zero-phasing the SUM, in ppm
         i_f_inf3=round(-(f_sup3-ppm_center)*zero_filling/SW_p+zero_filling/2)+1;
         i_f_sup3=round(-(f_inf3-ppm_center)*zero_filling/SW_p+zero_filling/2);
@@ -138,14 +143,10 @@ for nb_spec = 1:length(fid_struct)
             plot(real(fftshift(fft(dif_fid0))));	% plots final spectrum without any line broadening
         end
         
-    end
+        pphase = -phase*180/pi;
+        spec_cor = change_phase(spec_cor,pphase);
     
-    %Output parameters
-    
-    %spec_cor(nb_spec).dif_fid = dif_fid;
-    
-    
-    if par.figure
+    else
         
         dif_fid=sum3-sum2;
         dif_fid0 = dif_fid;
@@ -157,9 +158,11 @@ for nb_spec = 1:length(fid_struct)
         
         t=[0:dw:(np-1)*dw];
         dif_fid_lb=dif_fid.*exp(-t*pi*lb);
-        figure
-        plot(real(fftshift(fft(dif_fid_lb))));				% plots final spectrum with lb = 2 Hz
-        
+        if (par.figure)
+            
+            figure
+            plot(real(fftshift(fft(dif_fid_lb))));				% plots final spectrum with lb = 2 Hz
+        end
     end
     
     %%%%%%%%   LC MODEL
