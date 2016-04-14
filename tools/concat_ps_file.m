@@ -38,6 +38,8 @@ for k=1:length(d)
   movefile([pool '.ps'],'../..')
   movefile([pool '.pdf'],'../..')  
   
+  char(fps)
+  
 end
 
 cd(cwd)
