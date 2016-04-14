@@ -1,4 +1,4 @@
-function [conc]=get_result(dir_sel,waterref)
+function [conc ]=get_result(dir_sel,waterref)
 
 %for 3T data
 RESONANCE_FREQ = 123.25;
@@ -14,7 +14,7 @@ if iscell(dir_sel{1}) %multi dir per subject
         [pp model_name(nb_mod)] = get_parent_path(dir_sel{1}(nb_mod));
         for nbp=1:length(dir_sel)
             do{nb_mod}{nbp} = dir_sel{nbp}{nb_mod};
-        end        
+        end
         c=get_result(do{nb_mod});
         for nbp = 1:length(c)
             c(nbp).model_name = model_name{nb_mod};
@@ -41,8 +41,8 @@ for npool = 1:length(dir_sel)
     
     if isempty(dir([dir_sel{npool},'*.RAW']) )
         preproc_subdir=1; %result are in a preproc subdir
-else
-preproc_subdir=0;
+    else
+        preproc_subdir=0;
     end
     
     [p,f] = fileparts(dir_sel{npool});
@@ -54,14 +54,14 @@ preproc_subdir=0;
     for k = 1:length(F)
         
         result(k) = readcoord(F{k});
-       
-try 
-        [met cormat] = readprint(Fp{k});
-   catch
-	fprintf('problem reading the correlation coeff\n');
-	met={};
-	cormat=[];
-end    
+        
+        try
+            [met cormat] = readprint(Fp{k});
+        catch
+            fprintf('problem reading the correlation coeff\n');
+            met={};
+            cormat=[];
+        end
         %find the watter ref
         if waterref
             
@@ -126,9 +126,9 @@ end
         
         
         if waterref
-         %   concpool.suj_age{k} = f.patient_age;
-         %   concpool.water_phase(k) = f.wat_phase;
-         %   concpool.water_width(k) = f.water_width;
+            %   concpool.suj_age{k} = f.patient_age;
+            %   concpool.water_phase(k) = f.wat_phase;
+            %   concpool.water_width(k) = f.water_width;
             %      concpool.water_width_no_cor(k) = f.water_width_no_cor;
             %      concpool.water_width_lana(k) = f.water_width_lana;
             %      concpool.integral_real_fit(k) = f.integral_real_fit ;
