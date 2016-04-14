@@ -77,6 +77,9 @@ for k = 1:length(F)
       case '117laser'
 	P = createLCmodel_control_laser117T(fullfile(pathstr,filename),l1,l2,l3,preproc_dir)
 
+        case 'steam'
+    P = createLCmodel_control_steamT2(fullfile(pathstr,filename),l1,l2,l3,preproc_dir)
+    
     end
     
     unix(['~/.lcmodel/bin/lcmodel < ' P])
