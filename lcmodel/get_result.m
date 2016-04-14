@@ -1,4 +1,4 @@
-function [conc ]=get_result(dir_sel,waterref)
+function [conc result]=get_result(dir_sel,waterref)
 
 %for 3T data
 RESONANCE_FREQ = 123.25;
