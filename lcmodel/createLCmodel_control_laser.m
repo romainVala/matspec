@@ -12,7 +12,7 @@ basis_set_file_path = '/home/romain/data/spectro/Basis_set/Gosia/First/basis_LAS
 
 %basis_set_file_path = '/home/romain/data/spectro/Basis_set/Gosia/LASER/TE_65_naasplit/basis_LASER_TE_65_CENIR_100721_Naa55.BASIS';
 basis_set_file_path = '/home/romain/data/spectro/Basis_set/Gosia/LASER/TE_65_naasplit/basis_LASER_TE_65_CENIR_100721_Naa55_MM.BASIS';
-
+                       
 %TEMET=2;
 %basis_set_file_path = '/home/romain/data/spectro/Basis_set/Gosia/LASER/TE_65_naasplit/basis_LASER_TE=65_CENIR_100720.BASIS';
 %basis_set_file_path = '/home/romain/data/spectro/Basis_set/Gosia/LASER/TE_65_naasplit/basis_LASER_TE_65_CENIR_100720_MM.BASIS';
@@ -159,6 +159,7 @@ fprintf(fileid,' FWHMBA=0.0050\n');
 
 fprintf(fileid,' RFWHM=2.5\n');
 fprintf(fileid,' DKNTMN=1\n');
+fprintf(fileid,' DKNTMN=0.2\n');  %for repro study
 %fprintf(fileid,' DKNTMN=2\n');
 
 
@@ -180,8 +181,9 @@ fprintf(fileid,' PPMEND=0.5\n');
 %fprintf(fileid,' CHOMIT(4)=''Lac''\n');
 %fprintf(fileid,' CHOMIT(5)=''-CrCH2''\n');
 
-fprintf(fileid,' NOMIT=1\n');
+fprintf(fileid,' NOMIT=2\n');
 fprintf(fileid,' CHOMIT(1)=''Ala''\n');
+fprintf(fileid,' CHOMIT(2)=''PE''\n');
 
 fprintf(fileid,' NUSE1=3\n');
 
