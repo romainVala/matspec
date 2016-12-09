@@ -100,13 +100,29 @@ s = fgetl(fileid);
 lcmodelresults.spectrumbasl=fscanf(fileid,'%f',nbpoints);
 fprintf([num2str(length(lcmodelresults.spectrumbasl)) ' baseline values have been read\n\n'])
   
+
+for k=1:length(lcmodelresults.metabconc)
+    s = fgetl(fileid); %so you do not depend on the number of word
+    s = fgetl(fileid);
+    s =  regexprep(s,' +',' '); %change multiple blank into one blank
+    indblank = strfind(s,' ');
+    metaname = ['data_' s(indblank(1)+1:indblank(2)-1)];
+    s2 = s(indblank(2)+1:indblank(3));
+    strfind(s2,'Conc.')
+    if isempty(strfind(s2,'Conc.'))
+        break
+    end
+    lcmodelresults.(metaname) = fscanf(fileid,'%f',nbpoints);
+end
+    
+    
 % close .COORD file
 
 
-l=[];
-while isempty(findstr(l,'diagnostic table'))
-  l=fgetl(fileid);
-end
+% l=[];
+% while isempty(findstr(l,'diagnostic table'))
+%   l=fgetl(fileid);
+% end
 
 s=fscanf(fileid,'%s',1);
 s=fscanf(fileid,'%s',1);
