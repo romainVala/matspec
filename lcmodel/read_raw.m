@@ -20,7 +20,8 @@ for k =1:size(filename,1)
   fid(k).spectrum.SW_h = fid(k).spectrum.spectral_widht ;
   fid(k).spectrum.SW_p = fid(k).spectrum.SW_h/fid(k).spectrum.cenfreq 
   fid(k).spectrum.ppm_center = 4.7;
-%  fid(k).spectrum.ppm_center = 4.65;
+  fid(k).spectrum.ppm_center = 4.65;
+  fid(k).spectrum.ppm_center = 4.6518;
     
   fid(k).seqname = 'lcRAW';
   fid(k).Serie_description = 'lcRAW';

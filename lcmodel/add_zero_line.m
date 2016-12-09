@@ -1,8 +1,9 @@
 function fo=add_zer_line(f,fac)
 
 
-lb=1;
+lb=2;
 lineposition = -4.7; %-4.65;
+lineposition = -4.65;%4.65;
   
   
 fo =f;
