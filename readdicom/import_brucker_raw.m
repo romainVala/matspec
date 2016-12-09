@@ -7,7 +7,10 @@ end
 if iscell(fi)
 
 %ff = get_subdir_regex_files(fi,'fid$');
-ff = get_subdir_regex_files(fi,'fid.raw$',1);
+ff = get_subdir_regex_files(fi,'fid.raw$');
+if isempty(ff)
+   ff = get_subdir_regex_files(fi,'fid$');
+end
 
 for kk=1:length(ff)
   fid(kk) = import_brucker_raw(ff{kk});
@@ -52,9 +55,14 @@ while flag_method==0 ;
     if strmatch('##$PVM_RepetitionTime=',line);
         MethTR=str2num(strtok(line,'##$PVM_RepetitionTime='));
     end
-    if strmatch('##$PVM_NAverages=',line);
-        NA=str2num(strtok(line,'##$PVM_NAverages='));
+    %argg suivanat les version c'est pas les meme champs
+%     if strmatch('##$PVM_NAverages=',line);
+%         NA=str2num(strtok(line,'##$PVM_NAverages='));
+%     end
+    if strmatch('##$PVM_NRepetitions=',line);
+        NA=str2num(strtok(line,'##$PVM_NRepetitions='));
     end
+    
     if strmatch('##$PVM_SpecSWH=( 1 )',line);
         line=fgetl(pt_method);
         SW=str2num(line);
