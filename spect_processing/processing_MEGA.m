@@ -13,6 +13,7 @@ if ~exist('par'), par='';end
 if ~isfield(par,'ref_metab'),   par.ref_metab = 'CRE_SMALL2'; end
 if ~isfield(par,'correct_freq_mod'),   par.correct_freq_mod='real'; end % or 'abs'
 if ~isfield(par,'method'), par.method = 'max';end % max or correlation
+if ~isfield(par,'correlation_bound'), par.correlation_bound = '';end % max or correlation
 
 %if ~isfield(par,'')
 
