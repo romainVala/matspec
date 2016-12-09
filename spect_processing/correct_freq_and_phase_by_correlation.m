@@ -23,28 +23,52 @@ for jcal=1:nt
     fidzf(:,jcal) = [fid(:,jcal).*exp(-t*pi*LB-t.^2/(GF^2)); zeros(np*sifactor,1)];
 end
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%
 % FFT and mean
 spectfft = fftshift(fft(fidzf,[],1),1);
-spect_ref = abs(mean(spectfft,2));
+
+switch par.correct_freq_mod
+    case 'real'
+        spectfft = real(spectfft);
+    case 'abs'
+        spectfft = abs(spectfft);
+end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%
 % Cross-correlation algorithm
 fmax = (sw)/2;
 f = [fmax:-2*fmax/(length(fidzf)-1):-fmax];
+%t1 = [0:dw:dw*(length(fidzf)-1)]';
+FreqRef = 0;
+%count = 0;
+Frequency_correction = zeros(nt,1);
+
+%get ppm bound for the correlation
+if ~isempty(par.correlation_bound)
+    f_sup = par.correlation_bound(2); f_inf = par.correlation_bound(1);
+    zero_filling=size(fidzf,1);
+    
+    ppm_center = info.spectrum.ppm_center;	% receiver (4.7 ppm)
+    SW_p       = info.spectrum.SW_p;	% spectral width in ppm
+    
+    i_f_METAB_inf=round(-(f_sup-ppm_center)*(zero_filling-1)/SW_p+(zero_filling-1)/2)+1;
+    i_f_METAB_sup=round(-(f_inf-ppm_center)*(zero_filling-1)/SW_p+(zero_filling-1)/2)+1;
+    
+    spectfft = spectfft(i_f_METAB_inf:i_f_METAB_sup,:);
+    f = f(i_f_METAB_inf:i_f_METAB_sup);
+end
+
+spect_ref = mean(spectfft,2);
+
 newSR = sw./length(spect_ref);
 maxlags = round(maxshiftHz./newSR);
-t1 = [0:dw:dw*(length(fidzf)-1)]';
-FreqRef = 0;
-count = 0;
-Frequency_correction = zeros(nt);
 
 if par.do_freq_cor
     
     for ix = 1:nt
         clear spect_use
-        spect_use = abs(spectfft(:,ix));
+        spect_use = spectfft(:,ix);
         c = xcorr(spect_ref, spect_use, maxlags);
         
         % Determine frequency shift based on position of max signal
