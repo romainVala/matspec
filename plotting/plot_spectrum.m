@@ -276,7 +276,7 @@ for nbser = 1:length(spec_info)
     
     if ~isempty(param.save_file) & param.same_fig~=1
         %print( gcf, '-dpsc2','-r 100','-append',param.save_file)
-        print( gcf, '-djpeg100','-r 300','-append',[param.save_file '_Suj_' num2str(nbser)]);
+        print( gcf, '-djpeg100','-r 300',[param.save_file '_Suj_' num2str(nbser)]);
         %print( gcf,'-depsc', '-tiff','-r 100',[param.save_file ])
         
     end
