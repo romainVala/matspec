@@ -74,7 +74,7 @@ if ~isfield(par,'correct_freq_mod'),   par.correct_freq_mod='real'; end % or 'ab
 if ~isfield(par,'figure'), par.figure=1;     end
 
 if ~isfield(par,'stop_if_warning'), par.stop_if_warning = 0; end
-
+if ~isfield(par,'correlation_bound'), par.correlation_bound=[];end
 
 if nargin==0
     spec_cor=par;
