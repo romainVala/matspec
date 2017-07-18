@@ -196,7 +196,7 @@ plot_spectrum([fid_cor1,fid_cor2],p)  %to see them in the same plot
 %%%%%%%%%%%%% some other small thing
 plot_adjust_phase(fid) %will give you a gui to change and see the phase you
 %can then apply it with :
-fid_cor2 = chage_phase(fid_cor,20) %for a 20° phase change
+fid_cor2 = change_phase(fid_cor,20) %for a 20° phase change
 
 
 
@@ -208,4 +208,5 @@ plot_diff(f1,f2)  %if a plot to compare 2 population of spectra f1 and f2
 There are also different routine read lcmodel result  correct for csf
 I'll explain it soon
 
-be patient, send me the matlab error, and have fun);;;
+be patient, send me the matlab error, and have fun);
+
