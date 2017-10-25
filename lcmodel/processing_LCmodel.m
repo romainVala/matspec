@@ -1,4 +1,12 @@
-function processing_LCmodel(type,preproc_dir)
+function processing_LCmodel(type,preproc_dir,par)
+
+if ~exist('par'),par ='';end
+
+defpar.sge=0;
+defpar.jobname='lcmodel';
+
+par = complet_struct(par,defpar);
+
 
 if ~exist('preproc_dir')
   preproc_dir = '';
@@ -82,6 +90,11 @@ for k = 1:length(F)
     
     end
     
+if par.sge=0
     unix(['~/.lcmodel/bin/lcmodel < ' P])
+else
+   do_cmd_sge({['~/.lcmodel/bin/lcmodel < ' P]},par)
+end
+
     
 end
