@@ -1,13 +1,13 @@
 function mrprot = parse_mrprot(arr)
 % parse mrprot (text) structure
-%   E. Auerbach, CMRR, Univ. of Minnesota, 2014
+%   E. Auerbach, CMRR, Univ. of Minnesota, 2016
 %    some changes by Steven Baete, NYU LMC CBI, 2013 (SB)
 
 tstart = tic;
 
 % isolate the meas.asc portion only (strip the meas.evp part if present)
 if (size(arr,1) > 1), arr = arr'; end
-spos = strfind(arr,'### ASCCONV BEGIN ###');
+spos = strfind(arr,'### ASCCONV BEGIN ');
 epos = strfind(arr,'### ASCCONV END ###');
 if (~isempty(spos) && ~isempty(epos))
     arr = arr(spos:epos-1);
@@ -134,6 +134,7 @@ for curline=1:numlines
                          (strncmp(test_varname, 'WaitForUserStart'      , 16))   || ... % bool (numeric)
                          (strncmp(test_varname, 'DecouplingMatrixValid' , 21))   || ... % bool (numeric)
                          (strncmp(test_varname, 'ScatterMatrixValid'    , 18))   || ... % bool (numeric)
+                         (strncmp(test_varname, 'Laterality'            , 10))   || ... % ??? (numeric)
                          (strncmp(test_varname, 'i'                     , 1 )) )        % int (numeric)
                     fields = {fields{:}, varname, str2double(stub)};
                     
@@ -149,7 +150,8 @@ for curline=1:numlines
                     fields = {fields{:}, varname, getHexVal(stub)};
                     
                 elseif ( (strncmp(test_varname, 't'                     , 1 ))   || ... % text string
-                         (strncmp(test_varname, 's'                     , 1 )) )
+                         (strncmp(test_varname, 's'                     , 1 ))   || ... % text string
+                         (strncmp(test_varname, 'ZZMatrixVectorUUID'    , 18)) )        % string (UUID)
                     fields = {fields{:}, varname, getQuotString(stub)};
                     
                 elseif ( (old_version) && (strcmp(test_varname, 'SecUserToken')) )
@@ -157,7 +159,7 @@ for curline=1:numlines
                     fields = {fields{:}, varname, stub};
                     
                 else
-                    fprintf('parse_mrprot WARNING: unknown data type for %s (value = %s), discarding this line!\n',varname, stub);
+                    fprintf('parse_mrprot WARNING: unknown data type for %s (value = %s), discarding this line:\n%s\n',varname, stub, line);
                     skip_this = true;
                 end
             end
