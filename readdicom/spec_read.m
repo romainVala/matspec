@@ -1,20 +1,9 @@
 function [fid, dcmInfo] = spec_read(dn)
 % function to read spectroscopy data from siemens dicom .ima/.dcm files
+%   usage: [fid, dcmInfo] = spec_read(dn)
 %   arguments dn = filename
 
-%dcmInfo = spm_dicom_headers(dn);
-%dcmInfo = dcmInfo{1};
 dcmInfo = dicominfo(dn);
-
-%rrr to skip non spectroscopic data
-
-%if ~strcmp(dcmInfo.Private_0029_1008,'SPEC NUM 4')
-%if ~strcmp(dcmInfo.CSAImageHeaderType,'SPEC NUM 4') %ou
-if ~strcmp(dcmInfo.Private_0029_1108,'SPEC NUM 4')  
-  fid=[];
-  return;
-end
-
 
 % R2006b dicominfo() now reads the spectroscopy data as a private field
 % in this case, startofpixeldata is not supplied, so test for that
@@ -32,7 +21,7 @@ if isfield(dcmInfo,'StartOfPixelData')
     while (ftell(fp) < endpos)
         id = fread(fp,2,'*uint16');
         id_str = sprintf('Data_%s_%s',dec2hex(id(1),4),dec2hex(id(2),4));
-        vr = fread(fp,2,'*char')';
+        vr = fread(fp,2,'uint8=>char')';
 
         switch (vr)
             case {'OB','OW','SQ','UN'}
