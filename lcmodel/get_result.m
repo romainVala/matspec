@@ -1,9 +1,15 @@
-function [conc result]=get_result(dir_sel,waterref)
+function [conc result]=get_result(dir_sel,waterref,res_freq)
 
-%for 3T data
-RESONANCE_FREQ = 123.25;
-%for 7T data
-%RESONANCE_FREQ = 296.5917;
+if exist('res_freq','var')
+    RESONANCE_FREQ = res_freq;
+else
+    %for 3T data
+    RESONANCE_FREQ = 123.25;
+    %for 7T data
+    %RESONANCE_FREQ = 296.5917;
+    fprintf('taking default resonance frequency to %f, to change add as 3 input argument, this will only change the linewidth',RESONANCE_FREQ')
+end
+
 
 if ~exist('waterref')
     waterref=0;

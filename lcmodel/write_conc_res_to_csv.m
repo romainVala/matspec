@@ -1,5 +1,13 @@
-function write_conc_res_to_csv(conc,resname,field_list,std_abs)
+function write_conc_res_to_csv(conc,resname,high_res,field_list,std_abs)
+%function write_conc_res_to_csv(conc,resname,high_res,field_list,std_abs)
+%conc is the matlab structure to write
+%resname the filename to save
+%high_res is 0 or 1 if 1 full precision digit will be written
+%field_list to select only some field of the struct
 
+if ~exist('high_res','var')
+    high_res=1;
+end
 if ~exist('field_list')
     field_list = fieldnames(conc);
     field_list(1:2)=[];

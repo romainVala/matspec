@@ -41,7 +41,8 @@ while flag_method==0 ;
     if strmatch('##$PVM_SpecMatrix=( 1 )',line);
         line=fgetl(pt_method);
         Mtx=str2num(line);
-        
+    else
+       % keyboard
     end
     if strmatch('##$Method=',line);
         Methstr=(strtok(line,'##$Method='));
