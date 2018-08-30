@@ -67,7 +67,7 @@ if ~isfield(par,'mean_line_broadening'),par.mean_line_broadening=5; end
 if ~isfield(par,'correct_to_ref_metab'),par.correct_to_ref_metab =1; end
 
 if ~isfield(par,'ref_metab'),   par.ref_metab = 'NAA'; end
-if ~isfield(par,'correct_freq_mod'),   par.correct_freq_mod='real'; end % or 'abs'
+if ~isfield(par,'correct_freq_mod'),   par.correct_freq_mod='abs'; end % or 'real'
 
 %if ~isfield(par,'')
 
