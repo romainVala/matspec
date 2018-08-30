@@ -27,11 +27,15 @@ end
 % FFT and mean
 spectfft = fftshift(fft(fidzf,[],1),1);
 
+spect_ref = mean(spectfft,2);
+
 switch par.correct_freq_mod
     case 'real'
         spectfft = real(spectfft);
+        spect_ref = real(spect_ref);
     case 'abs'
         spectfft = abs(spectfft);
+        spect_ref = abs(spect_ref);
 end
 
 
@@ -59,7 +63,6 @@ if ~isempty(par.correlation_bound)
     f = f(i_f_METAB_inf:i_f_METAB_sup);
 end
 
-spect_ref = mean(spectfft,2);
 
 newSR = sw./length(spect_ref);
 maxlags = round(maxshiftHz./newSR);
@@ -118,7 +121,6 @@ end
 
 %do a global freq
 if par.correct_to_ref_metab
-    
     %make the same lb and zero filling as for correlation
     for jcal=1:nt
         fidzf(:,jcal) = [fid_cor(:,jcal).*exp(-t*pi*LB-t.^2/(GF^2)); zeros(np*sifactor,1)];
