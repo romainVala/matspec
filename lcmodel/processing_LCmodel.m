@@ -90,7 +90,7 @@ for k = 1:length(F)
     
     end
     
-if par.sge=0
+if par.sge==0
     unix(['~/.lcmodel/bin/lcmodel < ' P])
 else
    do_cmd_sge({['~/.lcmodel/bin/lcmodel < ' P]},par)
