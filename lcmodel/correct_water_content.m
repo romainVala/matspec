@@ -69,6 +69,11 @@ for npool = 1:length(conc)
       Rgm  = attenuation(1000,70*1.5,15000,65);
       Rwm  = attenuation(1000,70*1.5,15000,65);
       Rcsf = attenuation(4000,400*1.5,15000,65);
+    
+    elseif ttype==116
+      Rgm  = attenuation(1000,70*1.5,15000,55);
+      Rwm  = attenuation(1000,70*1.5,15000,55);
+      Rcsf = attenuation(4000,400*1.5,15000,55);
 
     elseif ttype==11
       Rgm  = attenuation(1000,110*1.1,15000,65);
