@@ -16,10 +16,10 @@ for k=1:length(d)
   fps=get_subdir_regex_files(d{k},{'.*PS$','.*ps$'});
   fps=char(fps);
   
-  cmdmerge = sprintf('psmerge -o%s.ps ',pool);
+  cmdmerge = sprintf('LD_LIBRARY_PATH= ;psmerge -o%s.ps ',pool);
   
   for nbf=1:size(fps,1)
-    cmd = sprintf('psselect -p1 %s suj%d.ps',fps(nbf,:),nbf);
+    cmd = sprintf('LD_LIBRARY_PATH= ;psselect -p1 %s suj%d.ps',fps(nbf,:),nbf);
 %    cmd = sprintf('psselect -p7 %s suj%d.ps',fps(nbf,:),nbf);
     unix(cmd);
     cmdmerge = sprintf('%s suj%d.ps ',cmdmerge,nbf);
@@ -28,7 +28,7 @@ for k=1:length(d)
   
   unix(cmdmerge);
   
-  cmdpdf = sprintf('ps2pdf %s.ps',pool);
+  cmdpdf = sprintf('LD_LIBRARY_PATH= ps2pdf %s.ps',pool);
   unix(cmdpdf);
   
   for nbf=1:size(fps,1)
