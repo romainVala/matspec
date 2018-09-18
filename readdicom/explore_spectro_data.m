@@ -1,4 +1,9 @@
-function spec_info = explore_spectro_data(P)
+function spec_info = explore_spectro_data(P,par)
+
+if ~exist('par'), par='';end
+
+if  ~isfield(par,'serie_level'), par.serie_level = 1; end
+if  ~isfield(par,'subject_level'), par.subject_level = 3; end
 
 if ~exist('P')
     P = spm_select([1 Inf],'dir','Select directories of dicom files')
@@ -16,7 +21,11 @@ for nbdir=1:size(P,1)
         [imghdr,serhdr,mrprot]=parse_siemens_shadow(dcm(1));
         
         Snum = sprintf('S%.2d',dcm(1).SeriesNumber);
-        s_descrip = [dcm(1).PatientID, ' Exam ', dcm(1).StudyID ,' ', Snum, '-',dcm(1).SeriesDescription];
+        if isfield(dcm(1),'SeriesDescription')
+            s_descrip = [dcm(1).PatientID, ' Exam ', dcm(1).StudyID ,' ', Snum, '-',dcm(1).SeriesDescription];
+        else
+            [pp s_descrip] = get_parent_path({deblank(P(nbdir,:))},par.serie_level) ;  s_descrip=s_descrip{1};                     
+        end
         spec_info(found).Serie_description = s_descrip;
         
         [p,f] = fileparts(adcm(1).Filename);
@@ -28,12 +37,13 @@ for nbdir=1:size(P,1)
             spec_info(found).seqname='eja_svs_megapress';
         end
         
-        
-        spec_info(found).patient_age = dcm(1).PatientAge(1:end-1);
-        spec_info(found).patient_sex = dcm(1).PatientSex;
+        if isfield(dcm(1),'PatientAge')
+            spec_info(found).patient_age = dcm(1).PatientAge(1:end-1);
+            spec_info(found).patient_sex = dcm(1).PatientSex;
+        end
         
         spec_info(found).mega_ws=serhdr.MiscSequenceParam(12);
-
+        
         if mrprot.sPrepPulses.ucWaterSat ==64
             spec_info(found).vapor_ws=0;
         elseif  mrprot.sPrepPulses.ucWaterSat ==1
@@ -73,24 +83,15 @@ for nbdir=1:size(P,1)
         spec_info(found).TR =  mrprot.alTR;
         spec_info(found).TE =  mrprot.alTE;
         spec_info(found).SubjectID = [dcm(1).PatientID, '_E', dcm(1).StudyID ];
+
+        [p,f] = get_parent_path({dcm(1).Filename},par.subject_level);
+        f=f{1};
         
-        [p,f]=fileparts(dcm(1).Filename);
-        [p,f] = fileparts(p);
-        [p,f] = fileparts(p);
-        %if length(f)>26
-        %  spec_info(found).sujet_name = f(21:27);
-        %else
         spec_info(found).sujet_name =f;
-        %end
         
         spec_info(found).examnumber = ['E',dcm(1).StudyID];
-        
-        
-        SerDescr = dcm(1).SeriesDescription;
-        %    if  findstr(SerDescr,'MEGA-PRESS '); SerDescr(1:11)='';end
-        %    if  findstr(SerDescr,'matrix '); SerDescr(1:7)='';end
-        
-        spec_info(found).SerDescr = SerDescr; clear SerDescr;
+                       
+        spec_info(found).SerDescr = s_descrip; 
         spec_info(found).studydate = dcm(1).StudyDate;
         
         spec.ppm_center = 4.7; 		% receiver (4.7 ppm)
