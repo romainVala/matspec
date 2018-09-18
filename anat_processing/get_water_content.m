@@ -59,7 +59,6 @@ for npol = 1:length(cmet)
     c(npol).fwhite(ns) = sy(2);
     c(npol).fcsf(ns)    = sy(3);
 
-    
     if dolesions
         y=get_marsy(roi,spm_vol(c4{num_suj}),'mean'); sy(4)=summary_data(y);
         c(npol).fles(ns)    = sy(4);
