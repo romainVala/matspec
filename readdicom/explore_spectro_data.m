@@ -3,7 +3,7 @@ function spec_info = explore_spectro_data(P,par)
 if ~exist('par'), par='';end
 
 if  ~isfield(par,'serie_level'), par.serie_level = 1; end
-if  ~isfield(par,'subject_level'), par.subject_level = 3; end
+if  ~isfield(par,'subject_level'), par.subject_level = 2; end
 
 if ~exist('P')
     P = spm_select([1 Inf],'dir','Select directories of dicom files')
@@ -84,7 +84,7 @@ for nbdir=1:size(P,1)
         spec_info(found).TE =  mrprot.alTE;
         spec_info(found).SubjectID = [dcm(1).PatientID, '_E', dcm(1).StudyID ];
 
-        [p,f] = get_parent_path({dcm(1).Filename},par.subject_level);
+        [p,f] = get_parent_path({deblank(P(nbdir,:))},par.subject_level);
         f=f{1};
         
         spec_info(found).sujet_name =f;
