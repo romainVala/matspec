@@ -1,12 +1,6 @@
-function [fo] = correct_baseline_mega(fids,ppm_bound,par)
+function [fo] = correct_baseline_mega(fids,nb_point)
 % RETURNS: the integral and centroid of the peak (in ppm)
-
-if ~exist('par'), par='';end
-
-if ~isfield(par,'spect'),   par.ref_metab = 'diff'; end %first second
-if ~isfield(par,'spect_mod'),   par.spect_mod='real'; end % or 'real'
-
-if ~iscell(ppm_bound), ppm_bound = {ppm_bound};end
+% nb_point number of points to estimate, from the end of the means spectra
 
 fo = fids
 for nbser = 1:length(fids)
@@ -29,35 +23,22 @@ for nbser = 1:length(fids)
     fid1m = mean(fid1,2);
     fid2m = mean(fid2,2);
     
+    spec1 = fftshift(fft(fid1));
+    spec2 = fftshift(fft(fid2));
+    
     spec1m = fftshift(fft(fid1m));
     spec2m = fftshift(fft(fid2m));
     
-    diffspecm = spec2m-spec1m;
+    spec1 = spec1 -  mean(spec1m(end-nb_point: end));
     
-    switch par.spect_mod
-        case 'real'
-            diffspecm = real(diffspecm);
-        case 'abs'
-            diffspecm = abs(diffspecm);
+    spec2 = spec2 -  mean(spec2m(end-nb_point: end));
+    
+    fid1_corected = ifft(ifftshift(spec1));
+    fid2_corected = ifft(ifftshift(spec2));
+    
+    
+    fo(nbser).fid = [fid1_corected fid2_corected];
+    
     end
-    
-    
-    select_spec=[];
-    for k=1:length(ppm_bound)
-        ppm1 = ppm_bound{1};
-        f_sup = ppm1(2); f_inf = ppm1(1);
-        zero_filling=length(diffspecm);
-        i_f_METAB_inf=round(-(f_sup-ppm_center)*(zero_filling-1)/SW_p+(zero_filling-1)/2)+1;
-        i_f_METAB_sup=round(-(f_inf-ppm_center)*(zero_filling-1)/SW_p+(zero_filling-1)/2)+1;
-        
-        select_spec = [select_spec ;diffspecm(i_f_METAB_inf:i_f_METAB_sup)];
-    end
-    
-    fid1 = fid1 - mean(select_spec);
-    fo(nbser).fid = [fid1 fid2];
-    
-    fprintf('correcting unsupressed fid by %f\n', mean(select_spec));
-
 end
-
 
