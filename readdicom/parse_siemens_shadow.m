@@ -6,9 +6,9 @@ function [img, ser, mrprot] = parse_siemens_shadow(varargin)
 %    dependencies: parse_mrprot.m
 %                  c_str.m
 %                  mread.m
-%   E. Auerbach, CMRR, Univ. of Minnesota, 2013
+%   E. Auerbach, CMRR, Univ. of Minnesota, 2022
 
-version = '2021.07.29';
+version = '2022.04.01 ''The April Fool''';
 
 fprintf('   ** parse_siemens_shadow version %s started\n', version);
 
@@ -30,8 +30,12 @@ if isfield(dcm,'Private_0029_10xx_Creator')
     ver_string = private_field_str_fix(dcm.Private_0029_1008);
     csa_string = private_field_str_fix(dcm.Private_0029_10xx_Creator);
 elseif isfield(dcm,'Private_0021_14xx_Creator')
-    % this is a special case for new DICOM MR spectroscopy data
+    % new DICOM MR spectroscopy data
     ver_string = private_field_str_fix(dcm.Private_0021_14xx_Creator);
+    csa_string = '';
+elseif isfield(dcm,'Private_0021_12xx_Creator')
+    % new XA image data
+    ver_string = private_field_str_fix(dcm.Private_0021_12xx_Creator);
     csa_string = '';
 end
 
@@ -59,8 +63,8 @@ elseif (strcmp(ver_string,'SPEC NUM 4'))
     else
         error('shadow: Invalid CSA HEADER identifier: %s',csa_string);
     end
-elseif (strfind(ver_string,'SIEMENS MR MRS')) %#ok<STRIFCND>
-    % MR spectroscopy format uses "standard" DICOM private format fields, not CSA headers
+elseif (strcmp(ver_string,'SIEMENS MR MRS 05') || strcmp(ver_string,'SIEMENS MR SDR 01'))
+    % XA MR formats use "standard" DICOM private format fields, not CSA headers
     img = parse_private_func(dcm.PerFrameFunctionalGroupsSequence.Item_1);
     ser = parse_private_func(dcm.SharedFunctionalGroupsSequence.Item_1);
 else
@@ -95,7 +99,7 @@ if (~haveCSAhdr)
             if (isfield(mrprot.sSpecPara.sVoI,'sPosition')), img.VoiPosition = mrprot.sSpecPara.sVoI.sPosition; end
         end
     end
-    img.ImageOrientationPatient = ser.ImageOrientationPatient;
+    if (isfield(ser,'ImageOrientationPatient')), img.ImageOrientationPatient = ser.ImageOrientationPatient; end
 end
 
 %--------------------------------------------------------------------------
@@ -139,8 +143,24 @@ for priv_idx=1:size(private_fn,1)
                         if ((length(param_name) == 17) && (strncmp(param_name,'Private_',8)))
                             param_name = rename_private_field(param_name, hdrCreators);
                         end
-                        
-                        hdr.(param_name)(item_idx,:) = param_val;
+
+                        if (isfield(hdr,param_name)) % catch duplicates
+                            if (strcmp(param_name, 'FlowCompensation') && (strcmp(param_val, 'NONE') || strcmp(param_val, 'No')))
+                                % this is known: FlowCompensation is doubly defined as 'NONE' and 'No'
+                            elseif (size(hdr.(param_name)) == size(param_val))
+                                % ignore if same size (overwrite)
+                            elseif (size(hdr.(param_name)) == size(param_val'))
+                                % ignore if same size (overwrite)
+                            elseif (strcmp(param_name, 'ReferencedFrameNumber'))
+                                % don't care about this
+                            else
+                                fprintf('parse_siemens_shadow WARNING: duplicate values found for %s:\n', param_name);
+                                disp(hdr.(param_name));
+                                disp(param_val);
+                            end
+                        else
+                            hdr.(param_name)(item_idx,:) = param_val;
+                        end
                     end
                 end
             end
@@ -152,7 +172,9 @@ end
 
 function realName = rename_private_field(codeName, hdrCreators)
 % internal function to rename private fields
-% cf. dictionary file: C:\MedCom\config\dcmAccess\dcm_dict.conf
+% cf. dictionary file (N4): C:\MedCom\config\dcmAccess\dcm_dict.conf
+% cf. dictionary file (NX): %ProgramFiles%\Numaris\MriProduct\DcmAccess\dcm_dict.conf
+% also %ProgramFiles%\Numaris\bin\Services\ElementDictionary\MR
 
 realName = codeName;
 
@@ -180,188 +202,232 @@ end
 
 if (strcmp(hdrType,'SIEMENS MR SDI 02'))
     % Group 21 Image Shadow Attribute private group SIEMENS IMAGE SHADOW ATTRIBUTES
+    % ElementDictionary--MR-SIEMENS_IMAGE_SHADOW_ATTRIBUTES.xml
     switch (upper(codeName(end-1:end)))
-        case '01', realName = 'NumberOfImagesInMosaic'                            ; % US;1;3;2
-        case '02', realName = 'SliceNormalVector'                                 ; % FD;3;3;2
-        case '03', realName = 'SliceMeasurementDuration'                          ; % DS;1;3;2
-        case '04', realName = 'TimeAfterStart'                                    ; % DS;1;3;2
-        case '05', realName = 'B_value'                                           ; % IS;1;3;2
-        case '06', realName = 'ICE_Dims'                                          ; % LO;1;3;2
-        case '1A', realName = 'RFSWDDataType'                                     ; % SH;1;3;2
-        case '1B', realName = 'MoCoQMeasure'                                      ; % US;1;3;2
-        case '1C', realName = 'PhaseEncodingDirectionPositive'                    ; % IS;1;3;2
-        case '1D', realName = 'PixelFile'                                         ; % OB;1;3;2
-        case '1F', realName = 'FMRIStimulInfo'                                    ; % IS;1;3;2
-        case '20', realName = 'VoxelInPlaneRot'                                   ; % DS;1;3;2
-        case '21', realName = 'DiffusionDirectionality'                           ; % CS;1;3;2
-        case '22', realName = 'VoxelThickness'                                    ; % DS;1;3;2
-        case '23', realName = 'B_matrix'                                          ; % FD;6;3;2
-        case '24', realName = 'MultistepIndex'                                    ; % IS;1;3;2
-        case '25', realName = 'Comp_AdjustedParam'                                ; % LT;1;3;2
-        case '26', realName = 'Comp_Algorithm'                                    ; % IS;1;3;2
-        case '27', realName = 'VoxelNormalCor'                                    ; % DS;1;3;2
-        case '29', realName = 'FlowEncodingDirectionString'                       ; % SH;1;3;2
-        case '2A', realName = 'VoxelNormalSag'                                    ; % DS;1;3;2
-        case '2B', realName = 'VoxelPositionSag'                                  ; % DS;1;3;2
-        case '2C', realName = 'VoxelNormalTra'                                    ; % DS;1;3;2
-        case '2D', realName = 'VoxelPositionTra'                                  ; % DS;1;3;2
-        case '2E', realName = 'UsedChannelMask'                                   ; % UL;1;3;2
-        case '2F', realName = 'RepetitionTimeEffective'                           ; % DS;1;3;2
-        case '30', realName = 'CsiImageOrientationPatient'                        ; % DS;6;3;2
-        case '32', realName = 'CsiSliceLocation'                                  ; % DS;1;3;2
-        case '33', realName = 'EchoColumnPosition'                                ; % IS;1;3;2
-        case '34', realName = 'FlowVenc'                                          ; % FD;1;3;2
-        case '35', realName = 'MeasuredFourierLines'                              ; % IS;1;3;2
-        case '36', realName = 'LQAlgorithm'                                       ; % SH;1;3;2
-        case '37', realName = 'VoxelPositionCor'                                  ; % DS;1;3;2
-        case '38', realName = 'Filter2'                                           ; % IS;1;3;2
-        case '39', realName = 'FMRIStimulLevel'                                   ; % FD;1;3;2
-        case '3A', realName = 'VoxelReadoutFOV'                                   ; % DS;1;3;2
-        case '3B', realName = 'NormalizeManipulated'                              ; % IS;1;3;2
-        case '3C', realName = 'RBMoCoRot'                                         ; % FD;3;3;2
-        case '3D', realName = 'Comp_ManualAdjusted'                               ; % IS;1;3;2
-        case '3F', realName = 'SpectrumTextRegionLabel'                           ; % SH;1;3;2
-        case '40', realName = 'VoxelPhaseFOV'                                     ; % DS;1;3;2
-        case '41', realName = 'GSWDDataType'                                      ; % SH;1;3;2
-        case '42', realName = 'RealDwellTime'                                     ; % IS;1;3;2
-        case '43', realName = 'Comp_JobID'                                        ; % LT;1;3;2
-        case '44', realName = 'Comp_Blended'                                      ; % IS;1;3;2
-        case '45', realName = 'ImaAbsTablePosition'                               ; % SL;3;3;2
-        case '46', realName = 'DiffusionGradientDirection'                        ; % FD;3;3;2
-        case '47', realName = 'FlowEncodingDirection'                             ; % IS;1;3;2
-        case '48', realName = 'EchoPartitionPosition'                             ; % IS;1;3;2
-        case '49', realName = 'EchoLinePosition'                                  ; % IS;1;3;2
-        case '4B', realName = 'Comp_AutoParam'                                    ; % LT;1;3;2
-        case '4C', realName = 'OriginalImageNumber'                               ; % IS;1;3;2
-        case '4D', realName = 'OriginalSeriesNumber'                              ; % IS;1;3;2
-        case '4E', realName = 'Actual3DImaPartNumber'                             ; % IS;1;3;2
-        case '4F', realName = 'ImaCoilString'                                     ; % LO;1;3;2
-        case '50', realName = 'CsiPixelSpacing'                                   ; % DS;2;3;2
-        case '51', realName = 'SequenceMask'                                      ; % UL;1;3;2
-        case '52', realName = 'ImageGroup'                                        ; % US;1;3;2
-        case '53', realName = 'BandwidthPerPixelPhaseEncode'                      ; % FD;1;3;2
-        case '54', realName = 'NonPlanarImage'                                    ; % US;1;3;2
-        case '55', realName = 'PixelFileName'                                     ; % OB;1;3;2
-        case '56', realName = 'ImaPATModeText'                                    ; % LO;1;3;2
-        case '57', realName = 'CsiImagePositionPatient'                           ; % DS;3;3;2
-        case '58', realName = 'AcquisitionMatrixText'                             ; % SH;1;3;2
-        case '59', realName = 'ImaRelTablePosition'                               ; % IS;3;3;2
-        case '5A', realName = 'RBMoCoTrans'                                       ; % FD;3;3;2
-        case '5B', realName = 'SlicePosition_PCS'                                 ; % FD;3;3;2
-        case '5C', realName = 'CsiSliceThickness'                                 ; % DS;1;3;2
-        case '5E', realName = 'ProtocolSliceNumber'                               ; % IS;1;3;2
-        case '5F', realName = 'Filter1'                                           ; % IS;1;3;2
-        case '60', realName = 'TransmittingCoil'                                  ; % SH;1;3;2
-        case '61', realName = 'NumberOfAverages'                                  ; % DS;1;3;2
-        case '62', realName = 'MosaicRefAcqTimes'                                 ; % FD;1-n;3;2
-        case '63', realName = 'AutoInlineImageFilterEnabled'                      ; % IS;1;3;2
-        case '65', realName = 'QCData'                                            ; % FD;1-n;3;2
-        case '66', realName = 'ExamLandmarks'                                     ; % LT;1;3;2
-        case '67', realName = 'ExamDataRole'                                      ; % ST;1;3;2
-        case '68', realName = 'MRDiffusion'                                       ; % OB;1;3;2
-        case '69', realName = 'RealWorldValueMapping'                             ; % OB;1;3;2
-        case '70', realName = 'DataSetInfo'                                       ; % OB;1;3;2
-        case '71', realName = 'UsedChannelString'                                 ; % UT;1;3;2
-        case '72', realName = 'PhaseContrastN4'                                   ; % CS;1;3;2
-        case '73', realName = 'MRVelocityEncoding'                                ; % UT;1;3;2
-        case '74', realName = 'VelocityEncodingDirectionN4'                       ; % FD;3;3;2
-        case '75', realName = 'ImageType4MF'                                      ; % CS;1-n;3;2
-        case '76', realName = 'ImageHistory'                                      ; % LO;1-n;3;1
-        case '77', realName = 'SequenceInfo'                                      ; % LO;1;3;1
-        case '78', realName = 'ImageTypeVisible'                                  ; % CS;1-n;3;1
-        case '79', realName = 'DistortionCorrectionType'                          ; % CS;1;3;2
-        case '80', realName = 'ImageFilterType'                                   ; % CS;1;3;2
-        case '81', realName = 'Distorcor_IntensityCorrection'                     ; % CS;1;3;2
+        case '01', realName = 'NumberOfImagesInMosaic'                            ; % US;1
+        case '02', realName = 'SliceNormalVector'                                 ; % FD;3
+        case '03', realName = 'SliceMeasurementDuration'                          ; % DS;1
+        case '04', realName = 'TimeAfterStart'                                    ; % DS;1
+        case '05', realName = 'B_value'                                           ; % IS;1 NumX eMR obsolete
+        case '06', realName = 'ICE_Dims'                                          ; % LO;1
+        case '1A', realName = 'RFSWDDataType'                                     ; % SH;1
+        case '1B', realName = 'MoCoQMeasure'                                      ; % US;1
+        case '1C', realName = 'PhaseEncodingDirectionPositive'                    ; % IS;1
+        case '1D', realName = 'PixelFile'                                         ; % OB;1
+        case '1F', realName = 'FMRIStimulInfo'                                    ; % IS;1
+        case '20', realName = 'VoxelInPlaneRot'                                   ; % DS;1
+        case '21', realName = 'DiffusionDirectionality4MF'                        ; % CS;1 NumX eMR obsolete
+        case '22', realName = 'VoxelThickness'                                    ; % DS;1
+        case '23', realName = 'B_matrix'                                          ; % FD;6 NumX eMR obsolete
+        case '24', realName = 'MultistepIndex'                                    ; % IS;1
+        case '25', realName = 'Comp_AdjustedParam'                                ; % LT;1
+        case '26', realName = 'Comp_Algorithm'                                    ; % IS;1
+        case '27', realName = 'VoxelNormalCor'                                    ; % DS;1
+        case '29', realName = 'FlowEncodingDirectionString'                       ; % SH;1
+        case '2A', realName = 'VoxelNormalSag'                                    ; % DS;1
+        case '2B', realName = 'VoxelPositionSag'                                  ; % DS;1
+        case '2C', realName = 'VoxelNormalTra'                                    ; % DS;1
+        case '2D', realName = 'VoxelPositionTra'                                  ; % DS;1
+        case '2E', realName = 'UsedChannelMask'                                   ; % UL;1
+        case '2F', realName = 'RepetitionTimeEffective'                           ; % DS;1
+        case '30', realName = 'CsiImageOrientationPatient'                        ; % DS;6
+        case '32', realName = 'CsiSliceLocation'                                  ; % DS;1
+        case '33', realName = 'EchoColumnPosition'                                ; % IS;1
+        case '34', realName = 'FlowVenc'                                          ; % FD;1 NumX eMR obsolete
+        case '35', realName = 'MeasuredFourierLines'                              ; % IS;1
+        case '36', realName = 'LQAlgorithm'                                       ; % SH;1
+        case '37', realName = 'VoxelPositionCor'                                  ; % DS;1
+        case '38', realName = 'Filter2'                                           ; % IS;1
+        case '39', realName = 'FMRIStimulLevel'                                   ; % FD;1
+        case '3A', realName = 'VoxelReadoutFOV'                                   ; % DS;1
+        case '3B', realName = 'NormalizeManipulated'                              ; % IS;1
+        case '3C', realName = 'RBMoCoRot'                                         ; % FD;3
+        case '3D', realName = 'Comp_ManualAdjusted'                               ; % IS;1
+        case '3F', realName = 'SpectrumTextRegionLabel'                           ; % SH;1
+        case '40', realName = 'VoxelPhaseFOV'                                     ; % DS;1
+        case '41', realName = 'GSWDDataType'                                      ; % SH;1
+        case '42', realName = 'RealDwellTime'                                     ; % IS;1
+        case '43', realName = 'Comp_JobID'                                        ; % LT;1
+        case '44', realName = 'Comp_Blended'                                      ; % IS;1
+        case '45', realName = 'ImaAbsTablePosition'                               ; % SL;3
+        case '46', realName = 'DiffusionGradientDirection'                        ; % FD;3 NumX eMR obsolete
+        case '47', realName = 'FlowEncodingDirection'                             ; % IS;1 NumX eMR obsolete
+        case '48', realName = 'EchoPartitionPosition'                             ; % IS;1
+        case '49', realName = 'EchoLinePosition'                                  ; % IS;1
+        case '4B', realName = 'Comp_AutoParam'                                    ; % LT;1
+        case '4C', realName = 'OriginalImageNumber'                               ; % IS;1
+        case '4D', realName = 'OriginalSeriesNumber'                              ; % IS;1
+        case '4E', realName = 'Actual3DImaPartNumber'                             ; % IS;1
+        case '4F', realName = 'ImaCoilString'                                     ; % LO;1
+        case '50', realName = 'CsiPixelSpacing'                                   ; % DS;2
+        case '51', realName = 'SequenceMask'                                      ; % UL;1
+        case '52', realName = 'ImageGroup'                                        ; % US;1
+        case '53', realName = 'BandwidthPerPixelPhaseEncode'                      ; % FD;1
+        case '54', realName = 'NonPlanarImage'                                    ; % US;1
+        case '55', realName = 'PixelFileName'                                     ; % OB;1
+        case '56', realName = 'ImaPATModeText'                                    ; % LO;1
+        case '57', realName = 'CsiImagePositionPatient'                           ; % DS;3
+        case '58', realName = 'AcquisitionMatrixText'                             ; % SH;1
+        case '59', realName = 'ImaRelTablePosition'                               ; % IS;3
+        case '5A', realName = 'RBMoCoTrans'                                       ; % FD;3
+        case '5B', realName = 'SlicePosition_PCS'                                 ; % FD;3
+        case '5C', realName = 'CsiSliceThickness'                                 ; % DS;1
+        case '5E', realName = 'ProtocolSliceNumber'                               ; % IS;1
+        case '5F', realName = 'Filter1'                                           ; % IS;1
+        case '60', realName = 'TransmittingCoil'                                  ; % SH;1
+        case '61', realName = 'NumberOfAveragesN4'                                ; % DS;1 NumX eMR obsolete
+        case '62', realName = 'MosaicRefAcqTimes'                                 ; % FD;1-n NumX eMR obsolete
+        case '63', realName = 'AutoInlineImageFilterEnabled'                      ; % IS;1
+        case '65', realName = 'QCData'                                            ; % FD;1-n
+        case '66', realName = 'ExamLandmarks'                                     ; % LT;1
+        case '67', realName = 'ExamDataRole'                                      ; % ST;1
+        case '68', realName = 'MRDiffusion'                                       ; % OB;1 NumX eMR obsolete
+        case '69', realName = 'RealWorldValueMapping'                             ; % OB;1 NumX eMR obsolete
+        case '70', realName = 'DataSetInfo'                                       ; % OB;1
+        case '71', realName = 'UsedChannelString'                                 ; % UT;1
+        case '72', realName = 'PhaseContrastN4'                                   ; % CS;1 NumX eMR obsolete
+        case '73', realName = 'MRVelocityEncoding'                                ; % UT;1 NumX eMR obsolete
+        case '74', realName = 'VelocityEncodingDirectionN4'                       ; % FD;3 NumX eMR obsolete
+        case '75', realName = 'ImageType4MF'                                      ; % CS;1-n meaning has been changed !!
+        case '76', realName = 'ImageHistory'                                      ; % LO;1-n
+        case '77', realName = 'SequenceInfo'                                      ; % LO;1
+        case '78', realName = 'ImageTypeVisible'                                  ; % CS;1-n NumX renamed to DistortionCorrectionHistory
+        case '79', realName = 'DistortionCorrectionType'                          ; % CS;1
+        case '80', realName = 'ImageFilterType'                                   ; % CS;1
+        case '81', realName = 'PostprocessingUID'                                 ; % LO;1 eMR Image/MR Image syngo.via only
+        case '82', realName = 'Distorcor_IntensityCorrection'                     ; % CS;1
+        case '84', realName = 'UserDefinedImage'                                  ; % UT;1 NumX - eMR Image only
+        case '85', realName = 'FmriResultSequence'                                ; % UT;1 NumX - eMR Image only   
+        case '86', realName = 'MR_ASL'                                            ; % UT;1 NumX - eMR Image only
+        case '87', realName = 'VolumetricProperties4MF'                           ; % CS;1 NumX - eMR Image only
+        case '88', realName = 'SliceCenterDistancefromIsoCenter'                  ; % DS;1 NumX - eMR Image only
+        case '89', realName = 'FrameInversionTime'                                ; % DS;1 NumX - eMR Image only; copied from Inversion Times 0018,9079
+        case '8A', realName = 'FrameNumberInSeries'                               ; % IS;1 NumX - eMR Image only
+        case '8B', realName = 'SlicePositionText'                                 ; % SH;1 NumX - eMR Image only
+        case '8C', realName = 'MorphoQCThreshold'                                 ; % FD;1 NumX - eMR Image only
+        case '8D', realName = 'MorphoQCIndex'                                     ; % FD;1 NumX - eMR Image only
+        case '8E', realName = 'DICOM_Dims'                                        ; % ST;1 NumX - eMR Image only
         otherwise
             fprintf('parse_siemens_shadow WARNING: unknown image shadow header parameter %s\n', codeName);
     end
 elseif (strcmp(hdrType,'SIEMENS MR SDS 01'))
     % Group 21 Series Shadow Attribute private SIEMENS SERIES SHADOW ATTRIBUTES
+    % ElementDictionary--MR-SIEMENS_SERIES_SHADOW_ATTRIBUTES.xml
     switch (upper(codeName(end-1:end)))
-        case '01', realName = 'UsedPatientWeight'                                 ; % IS;1;3;1
-        case '02', realName = 'SarWholeBody'                                      ; % DS;3;3;1
-        case '03', realName = 'MrProtocol'                                        ; % OB;1;3;1
-        case '04', realName = 'SliceArrayConcatenations'                          ; % DS;1;3;1
-        case '05', realName = 'RelTablePosition'                                  ; % IS;3;3;1
-        case '06', realName = 'CoilForGradient'                                   ; % LO;1;3;1
-        case '07', realName = 'LongModelName'                                     ; % LO;1;3;1
-        case '08', realName = 'GradientMode'                                      ; % SH;1;3;1
-        case '09', realName = 'PATModeText'                                       ; % LO;1;3;1
-        case '0A', realName = 'SW_korr_faktor'                                    ; % DS;1;3;1
-        case '0B', realName = 'RfPowerErrorIndicator'                             ; % DS;1;3;1
-        case '0C', realName = 'PositivePCSDirections'                             ; % SH;1;3;1
-        case '0D', realName = 'ProtocolChangeHistory'                             ; % US;1;3;1
-        case '0E', realName = 'DataFileName'                                      ; % LO;1;3;1
-        case '0F', realName = 'Stim_lim'                                          ; % DS;3;3;1
-        case '10', realName = 'MrProtocolVersion'                                 ; % IS;1;3;1
-        case '11', realName = 'PhaseGradientAmplitude'                            ; % DS;1;3;1
-        case '12', realName = 'ReadoutOS'                                         ; % FD;1;3;1
-        case '13', realName = 't_puls_max'                                        ; % DS;1;3;1
-        case '14', realName = 'NumberOfPrescans'                                  ; % IS;1;3;1
-        case '15', realName = 'MeasurementIndex'                                  ; % FL;1;3;1
-        case '16', realName = 'dBdt_thresh'                                       ; % DS;1;3;1
-        case '17', realName = 'SelectionGradientAmplitude'                        ; % DS;1;3;1
-        case '18', realName = 'RFSWDMostCriticalAspect'                           ; % SH;1;3;1
-        case '19', realName = 'MrPhoenixProtocol'                                 ; % OB;1;3;1
-        case '1A', realName = 'CoilString'                                        ; % LO;1;3;1
-        case '1B', realName = 'SliceResolution'                                   ; % DS;1;3;1
-        case '1C', realName = 'Stim_max_online'                                   ; % DS;3;3;1
-        case '1D', realName = 'Operation_mode_flag'                               ; % IS;1;3;1
-        case '1E', realName = 'AutoAlignMatrix'                                   ; % FL;16;3;1
-        case '1F', realName = 'CoilTuningReflection'                              ; % DS;2;3;1
-        case '20', realName = 'RepresentativeImage'                               ; % UI;1;3;1
-        case '22', realName = 'SequenceFileOwner'                                 ; % SH;1;3;1
-        case '23', realName = 'RfWatchdogMask'                                    ; % IS;1;3;1
-        case '24', realName = 'PostProcProtocol'                                  ; % LO;1;3;1
-        case '25', realName = 'TablePositionOrigin'                               ; % SL;3;3;1
-        case '26', realName = 'MiscSequenceParam'                                 ; % IS;32;3;1
-        case '27', realName = 'Isocentered'                                       ; % US;1;3;1
-        case '2A', realName = 'CoilId'                                            ; % IS;0;3;1
-        case '2B', realName = 'PatReinPattern'                                    ; % ST;1;3;1
-        case '2C', realName = 'Sed'                                               ; % DS;3;3;1
-        case '2D', realName = 'SARMostCriticalAspect'                             ; % DS;3;3;1
-        case '2E', realName = 'Stim_mon_mode'                                     ; % IS;1;3;1
-        case '2F', realName = 'GradientDelayTime'                                 ; % DS;3;3;1
-        case '30', realName = 'ReadoutGradientAmplitude'                          ; % DS;1;3;1
-        case '31', realName = 'AbsTablePosition'                                  ; % IS;1;3;1
-        case '32', realName = 'RFSWDOperationMode'                                ; % SS;1;3;1
-        case '33', realName = 'CoilForGradient2'                                  ; % SH;1;3;1
-        case '34', realName = 'Stim_faktor'                                       ; % DS;1;3;1
-        case '35', realName = 'Stim_max_ges_norm_online'                          ; % DS;1;3;1
-        case '36', realName = 'dBdt_max'                                          ; % DS;1;3;1
-        %case '37', realName = 'FlowCompensation'                                 ; % SH;1;3;1
-        case '38', realName = 'TransmitterCalibration'                            ; % DS;1;3;1
-        case '39', realName = 'MrEvaProtocol'                                     ; % OB;1;3;1
-        case '3B', realName = 'dBdt_limit'                                        ; % DS;1;3;1
-        case '3C', realName = 'VFModelInfo'                                       ; % OB;1;3;1
-        case '3D', realName = 'PhaseSliceOversampling'                            ; % CS;1;3;1
-        case '3E', realName = 'VFSettings'                                        ; % OB;1;3;1
-        case '3F', realName = 'AutoAlignData'                                     ; % UT;1;3;1
-        case '40', realName = 'FmriModelParameters'                               ; % UT;1;3;1
-        case '41', realName = 'FmriModelInfo'                                     ; % UT;1;3;1
-        case '42', realName = 'FmriExternalParameters'                            ; % UT;1;3;1
-        case '43', realName = 'FmriExternalInfo'                                  ; % UT;1;3;1
-        case '44', realName = 'B1rms'                                             ; % DS;2;3;1
-        case '45', realName = 'B1rmsSupervision'                                  ; % CS;1;3;1
-        case '46', realName = 'TalesReferencePower'                               ; % DS;1;3;1
-        case '47', realName = 'SafetyStandard'                                    ; % CS;1;3;1
-        case '48', realName = 'DICOMImageFlavor'                                  ; % CS;1;3;1
-        case '49', realName = 'DICOMAcquisitionContrast'                          ; % CS;1;3;1
-        case '50', realName = 'RFEchoTrainLength'                                 ; % US;1;3;1
-        case '51', realName = 'GradientEchoTrainLength'                           ; % US;1;3;1
-        case '53', realName = 'Laterality4MF'                                     ; % CS;1;3;1    
-
+        case '01', realName = 'UsedPatientWeight'                                 ; % IS;1 
+        case '02', realName = 'SarWholeBody'                                      ; % DS;3 
+        case '03', realName = 'MrProtocol'                                        ; % OB;1 NumX eMR obsolete
+        case '04', realName = 'SliceArrayConcatenations'                          ; % DS;1 
+        case '05', realName = 'RelTablePosition'                                  ; % IS;3 
+        case '06', realName = 'CoilForGradient'                                   ; % LO;1 
+        case '07', realName = 'LongModelName'                                     ; % LO;1 
+        case '08', realName = 'GradientMode'                                      ; % SH;1 
+        case '09', realName = 'PATModeText'                                       ; % LO;1 
+        case '0A', realName = 'SW_korr_faktor'                                    ; % DS;1 
+        case '0B', realName = 'RfPowerErrorIndicator'                             ; % DS;1 
+        case '0C', realName = 'PositivePCSDirections'                             ; % SH;1 
+        case '0D', realName = 'ProtocolChangeHistory'                             ; % US;1 
+        case '0E', realName = 'DataFileName'                                      ; % LO;1 NumX eMR obsolete
+        case '0F', realName = 'Stim_lim'                                          ; % DS;3 
+        case '10', realName = 'MrProtocolVersion'                                 ; % IS;1 
+        case '11', realName = 'PhaseGradientAmplitude'                            ; % DS;1 
+        case '12', realName = 'ReadoutOS'                                         ; % FD;1 
+        case '13', realName = 't_puls_max'                                        ; % DS;1 
+        case '14', realName = 'NumberOfPrescans'                                  ; % IS;1 
+        case '15', realName = 'MeasurementIndex'                                  ; % FL;1 NumX eMR obsolete
+        case '16', realName = 'dBdt_thresh'                                       ; % DS;1 
+        case '17', realName = 'SelectionGradientAmplitude'                        ; % DS;1 
+        case '18', realName = 'RFSWDMostCriticalAspect'                           ; % SH;1 
+        case '19', realName = 'MrPhoenixProtocol'                                 ; % OB;1 NumX eMR obsolete
+        case '1A', realName = 'CoilString'                                        ; % LO;1 
+        case '1B', realName = 'SliceResolution'                                   ; % DS;1 
+        case '1C', realName = 'Stim_max_online'                                   ; % DS;3 NumX eMR obsolete
+        case '1D', realName = 'Operation_mode_flag'                               ; % IS;1 
+        case '1E', realName = 'AutoAlignMatrix'                                   ; % FL;16 NumX eMR obsolete
+        case '1F', realName = 'CoilTuningReflection'                              ; % DS;2 NumX eMR obsolete
+        case '20', realName = 'RepresentativeImage'                               ; % UI;1 NumX eMR obsolete
+        case '22', realName = 'SequenceFileOwner'                                 ; % SH;1
+        case '23', realName = 'RfWatchdogMask'                                    ; % IS;1
+        case '24', realName = 'PostProcProtocol'                                  ; % LO;1NumX eMR obsolete
+        case '25', realName = 'TablePositionOrigin'                               ; % SL;3
+        case '26', realName = 'MiscSequenceParam'                                 ; % IS;1-n
+        case '27', realName = 'Isocentered'                                       ; % US;1
+        case '2A', realName = 'CoilId'                                            ; % IS;1-n
+        case '2B', realName = 'PatReinPattern'                                    ; % ST;1
+        case '2C', realName = 'Sed'                                               ; % DS;3
+        case '2D', realName = 'SARMostCriticalAspect'                             ; % DS;3
+        case '2E', realName = 'Stim_mon_mode'                                     ; % IS;1
+        case '2F', realName = 'GradientDelayTime'                                 ; % DS;3
+        case '30', realName = 'ReadoutGradientAmplitude'                          ; % DS;1
+        case '31', realName = 'AbsTablePosition'                                  ; % IS;1
+        case '32', realName = 'RFSWDOperationMode'                                ; % SS;1
+        case '33', realName = 'CoilForGradient2'                                  ; % SH;1
+        case '34', realName = 'Stim_faktor'                                       ; % DS;1
+        case '35', realName = 'Stim_max_ges_norm_online'                          ; % DS;1
+        case '36', realName = 'dBdt_max'                                          ; % DS;1
+        case '37', realName = 'FlowCompensation'                                  ; % DS;1 NumX - eMR Image only
+        case '38', realName = 'TransmitterCalibration'                            ; % DS;1
+        case '39', realName = 'MrEvaProtocol'                                     ; % OB;1 NumX eMR obsolete
+        case '3B', realName = 'dBdt_limit'                                        ; % DS;1
+        case '3C', realName = 'VFModelInfo'                                       ; % OB;1
+        case '3D', realName = 'PhaseSliceOversampling'                            ; % CS;1
+        case '3E', realName = 'VFSettings'                                        ; % OB;1
+        case '3F', realName = 'AutoAlignData'                                     ; % UT;1 NumX eMR obsolete
+        case '40', realName = 'FmriModelParameters'                               ; % UT;1
+        case '41', realName = 'FmriModelInfo'                                     ; % UT;1
+        case '42', realName = 'FmriExternalParameters'                            ; % UT;1
+        case '43', realName = 'FmriExternalInfo'                                  ; % UT;1
+        case '44', realName = 'B1rms'                                             ; % DS;2
+        case '45', realName = 'B1rmsSupervision'                                  ; % CS;1 
+        case '46', realName = 'TalesReferencePower'                               ; % DS;1 
+        case '47', realName = 'SafetyStandard'                                    ; % CS;1 NumX eMR obsolete
+        case '48', realName = 'DICOMImageFlavor'                                  ; % CS;1 
+        case '49', realName = 'DICOMAcquisitionContrast'                          ; % CS;1 
+        case '50', realName = 'RfEchoTrainLength4MF'                              ; % US;1 
+        case '51', realName = 'GradientEchoTrainLength4MF'                        ; % US;1
+        case '52', realName = 'VersionInfo'                                       ; % LO;1  NumX eMR obsolete
+        case '53', realName = 'Laterality4MF'                                     ; % CS;1     
+        case '54', realName = 'FmriAcquisitionDescriptionSequence'                ; % UT;1 NumX - eMR Image only
+        case '55', realName = 'ArterialSpinLabelingContrast'                      ; % CS;1 NumX - eMR Image only
+        case '56', realName = 'ConfigFileInfo'                                    ; % UT;1 NumX - eMR Image only
+        case '57', realName = 'UserDefinedSeries'                                 ; % UT;1 NumX - eMR Image only
+        case '58', realName = 'AASpineModelVerificationStatus'                    ; % SL;1 NumX - eMR Image only
+        case '59', realName = 'AASpineModelData'                                  ; % UT;1 NumX - eMR Image only
+        case '5A', realName = 'ScanningSequence'                                  ; % CS;1 NumX - eMR Image only
+        case '5B', realName = 'SequenceVariant'                                   ; % CS;1 NumX - eMR Image only
+        case '5C', realName = 'MeasurementOptions'                                ; % CS;1-n 
+        case '5D', realName = 'ScanRegionPositionIso'                             ; % SL;1 NumX - eMR Image only
+        case '5E', realName = 'FieldOfViewText'                                   ; % LO;1 NumX - eMR Image only
+        case '5F', realName = 'RelTablePositionText'                              ; % SH;1 NumX - eMR Image only
+        case '60', realName = 'MeasurementStartDateTime'                          ; % DT;1 NumX - eMR Image only
+        case '61', realName = 'ExtendedPositionInfo'                              ; % SH;1 NumX - eMR Image only
+        case '62', realName = 'RFPulseAmplitude'                                  ; % FL;1-n NumX - eMR Image only
         otherwise
             fprintf('parse_siemens_shadow WARNING: unknown series shadow header parameter %s\n', codeName);
     end
 elseif (strcmp(hdrType,'SIEMENS MR MRS 05'))
     % Group SIEMENS MR MRS 05 private group
+    % ElementDictionary--MR-SIEMENS_SPECTROSCOPY_SHADOW_ATTRIBUTES.xml
     switch (upper(codeName(end-1:end)))
-        case '01', realName = 'TransmitterReferenceAmplitude'                     ; % FD;1;3
-        case '02', realName = 'HammingFilterWidth'                                ; % US;1;3
-        case '03', realName = 'CsiGridshiftVector'                                ; % FD;3;3
-        case '04', realName = 'MixingTime'                                        ; % FD;1;3
-        case '05', realName = 'Repetitions'                                       ; % IS;1;3
+        case '01', realName = 'TransmitterReferenceAmplitude'                     ; % FD;1
+        case '02', realName = 'HammingFilterWidth'                                ; % US;1
+        case '03', realName = 'CsiGridshiftVector'                                ; % FD;3
+        case '04', realName = 'MixingTime'                                        ; % FD;1
+        case '05', realName = 'NumberOfRepetition'                                ; % IS;1
+        %case '06', realName = 'OriginalWaterReferencedSOPInstanceUID'             ; % UI;1
+        %case '07', realName = 'OriginalSOPInstanceUID'                            ; % UI;1
+        %case '40', realName = 'SeriesProtocolInstance'                            ; % CS;1
+        %case '41', realName = 'SpectroResultType'                                 ; % CS;1
+        %case '42', realName = 'SpectroResultExtendType'                           ; % CS;1
+        %case '43', realName = 'PostProcProtocol'                                  ; % CS;1
+        %case '44', realName = 'RescanLevel'                                       ; % CS;1
+        %case '45', realName = 'SpectroAlgoResult'                                 ; % OF;1
+        %case '46', realName = 'SpectroDisplayParams'                              ; % OF;1
+        %case '47', realName = 'VoxelNumber'                                       ; % IS;1
+        %case '48', realName = 'APRSequence'                                       ; % SQ;1
+        %case '49', realName = 'SyncData'                                          ; % CS;1
+        %case '4A', realName = 'PostProcDetailedProtocol'                          ; % CS;1
+        %case '4B', realName = 'SpectroResultExtendTypeDetailed'                   ; % CS;1
         otherwise
             fprintf('parse_siemens_shadow WARNING: unknown MRS shadow header parameter %s\n', codeName);
     end

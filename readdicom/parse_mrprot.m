@@ -1,9 +1,9 @@
 function mrprot = parse_mrprot(arr)
 % parse mrprot (text) structure
-%   E. Auerbach, CMRR, Univ. of Minnesota, 2016
+%   E. Auerbach, CMRR, Univ. of Minnesota, 2022
 %    some changes by Steven Baete, NYU LMC CBI, 2013 (SB)
 
-version = '2018.11.08';
+version = '2022.04.01';
 
 fprintf('   ** parse_mrprot version %s started (%d bytes input)\n', version, numel(arr));
 
@@ -43,7 +43,7 @@ for curline=1:numlines
         
         % sDiffusion.sFreeDiffusionData.sComment.NNN is an oddball case introduced in
         % since VE11 or so; convert to []
-        if (strncmp(varname, 'sDiffusion.sFreeDiffusionData.sComment.', 39))
+        if (my_strncmp(varname, 'sDiffusion.sFreeDiffusionData.sComment.'))
             varname = [strtrim(varname) ']'];
             varname(39) = '[';
         end
@@ -79,19 +79,19 @@ for curline=1:numlines
         for x=1:lvls
             varname = make_safe_fieldname(varnamearr{x});
             
-            if (strncmp(varname, 'x__attribute__', 14)) % new for VD11 (note: after VD13 mod, make_safe_fieldname() prepends 'x')
+            if (my_strncmp(varname, 'x__attribute__')) % new for VD11 (note: after VD13 mod, make_safe_fieldname() prepends 'x')
                 % skip it
                 skip_this = true;
                 break;
             end
             
-            if (strncmp(varname, 'm_', 2)) % fix VAxx YAPS naming
+            if (my_strncmp(varname, 'm_')) % fix VAxx YAPS naming
                 varname = varname(3:end);
                 old_version = true;
                 
                 %fix VAxx array naming, since they are equivalent to
                 %VBxx non-arrayed parameters
-                if ( (strncmp(varname, 'al', 2)) || (strncmp(varname, 'afl', 2)) )
+                if ( (my_strncmp(varname, 'al')) || (my_strncmp(varname, 'afl')) )
                     test_varname = varname(2:end);
                 else
                     test_varname = varname;
@@ -102,7 +102,7 @@ for curline=1:numlines
             end
             
             % these changed in VD11 for some reason; rename for backward compatibility
-            if (strncmp(varname, 'sWipMemBlock', 12))
+            if (my_strncmp(varname, 'sWipMemBlock'))
                 varname = 'sWiPMemBlock';
             end
             
@@ -115,57 +115,64 @@ for curline=1:numlines
                 % last one
                 stub = getYaPSBracketString(getEqualString(stub));
                 
-                if (     (strncmp(test_varname, 'afl'                   , 3 ))   || ... % array of floats (numeric)
-                         (strncmp(test_varname, 'ac'                    , 2 ))   || ... % array of signed chars (?) (numeric)
-                         (strncmp(test_varname, 'ad'                    , 2 ))   || ... % array of doubles (numeric)
-                         (strncmp(test_varname, 'al'                    , 2 ))   || ... % array of longs (numeric)
-                         (strncmp(test_varname, 'ax'                    , 2 ))   || ... % array of complex values (numeric)
-                         (strncmp(test_varname, 'MaxOnlineTxAmpl'       , 15))   || ... % array of floats
-                         (strncmp(test_varname, 'MaxOfflineTxAmpl'      , 16))   || ... % array of floats
-                         (strncmp(test_varname, 'IdPart'                , 6 ))   || ... % array of bytes (?)
-                         (strncmp(test_varname, 'an'                    , 2 )) )        % array of signed value (long?) (numeric)
+                if (     (my_strncmp(test_varname, 'afl'))                          || ... % array of floats (numeric)
+                         (my_strncmp(test_varname, 'ac'))                           || ... % array of signed chars (?) (numeric)
+                         (my_strncmp(test_varname, 'ad'))                           || ... % array of doubles (numeric)
+                         (my_strncmp(test_varname, 'al'))                           || ... % array of longs (numeric)
+                         (my_strncmp(test_varname, 'ax'))                           || ... % array of complex values (numeric)
+                         (my_strncmp(test_varname, 'MaxOnlineTxAmpl'))              || ... % array of floats
+                         (my_strncmp(test_varname, 'MaxOfflineTxAmpl'))             || ... % array of floats
+                         (my_strncmp(test_varname, 'IdPart'))                       || ... % array of bytes (?)
+                         (my_strncmp(test_varname, 'an')) )                                % array of signed value (long?) (numeric)
                     fields = {fields{:}, varname, {idx1, idx2}, str2num(stub)};  %#ok<*CCAT,ST2NM> % (use str2num here for arrays)
                     
-                elseif ( (strncmp(test_varname, 'aui'                   , 3 ))   || ... % array of unsigned int (hex)
-                         (strncmp(test_varname, 'aul'                   , 3 )) )        % array of unsigned long (hex)
+                elseif ( (my_strncmp(test_varname, 'aui'))                          || ... % array of unsigned int (hex)
+                         (my_strncmp(test_varname, 'aul')) )                               % array of unsigned long (hex)
                     fields = {fields{:}, varname, {idx1, idx2}, getHexVal(stub)};
                     
-                elseif ( (strncmp(test_varname, 'sComment'              , 8 )) )        % array of chars (hex)
+                elseif ( (my_strncmp(test_varname, 'sComment')) )                          % array of chars (hex)
                     fields = {fields{:}, varname, {idx2, idx1}, char(getHexVal(stub))};
                     
-                elseif   (strncmp(test_varname, 'at'                    , 2 ))          % array of text strings
+                elseif   (my_strncmp(test_varname, 'at'))                                  % array of text strings
                     fields = {fields{:}, varname, {idx1, idx2}, cellstr(getQuotString(stub))};
                     
-                elseif ( (strncmp(test_varname, 'fl'                    , 2 ))   || ... % float (numeric)
-                         (strncmp(test_varname, 'l'                     , 1 ))   || ... % long value (signed) (numeric)
-                         (strncmp(test_varname, 'd'                     , 1 ))   || ... % double value (numeric)
-                         (strncmp(test_varname, 'n'                     , 1 ))   || ... % signed value (long?) (numeric)
-                         (strncmp(test_varname, 'e'                     , 1 ))   || ... % enum (long?) (numeric)
-                         (strncmp(test_varname, 'WorstCase'             , 9 ))   || ... % float
-                         (strncmp(test_varname, 'Nucleus'               , 7 ))   || ... % float
-                         (strncmp(test_varname, 'BCC'                   , 3 ))   || ... % int (numeric)
-                         (strncmp(test_varname, 'WaitForUserStart'      , 16))   || ... % bool (numeric)
-                         (strncmp(test_varname, 'DecouplingMatrixValid' , 21))   || ... % bool (numeric)
-                         (strncmp(test_varname, 'ScatterMatrixValid'    , 18))   || ... % bool (numeric)
-                         (strncmp(test_varname, 'Laterality'            , 10))   || ... % ??? (numeric)
-                         (strncmp(test_varname, 'i'                     , 1 )) )        % int (numeric)
+                elseif ( (my_strncmp(test_varname, 'fl'))                           || ... % float (numeric)
+                         (my_strncmp(test_varname, 'l'))                            || ... % long value (signed) (numeric)
+                         (my_strncmp(test_varname, 'd'))                            || ... % double value (numeric)
+                         (my_strncmp(test_varname, 'n'))                            || ... % signed value (long?) (numeric)
+                         (my_strncmp(test_varname, 'e'))                            || ... % enum (long?) (numeric)
+                         (my_strncmp(test_varname, 'WorstCase'))                    || ... % float
+                         (my_strncmp(test_varname, 'Nucleus'))                      || ... % float
+                         (my_strncmp(test_varname, 'BCC'))                          || ... % int (numeric)
+                         (my_strncmp(test_varname, 'WaitForUserStart'))             || ... % bool (numeric)
+                         (my_strncmp(test_varname, 'DecouplingMatrixValid'))        || ... % bool (numeric)
+                         (my_strncmp(test_varname, 'ScatterMatrixValid'))           || ... % bool (numeric)
+                         (my_strncmp(test_varname, 'Laterality'))                   || ... % ??? (numeric)
+                         (my_strncmp(test_varname, 'SarOptimization'))              || ... % ??? (numeric)
+                         (my_strncmp(test_varname, 'Reordering3D'))                 || ... % ??? (numeric)
+                         (my_strncmp(test_varname, 'DistributionAsymmetry'))        || ... % ??? (numeric)
+                         (my_strncmp(test_varname, 'SpiralInterleaves'))            || ... % ??? (numeric)
+                         (my_strncmp(test_varname, 'MrfMode'))                      || ... % ??? (numeric)
+                         (my_strncmp(test_varname, 'MrfUserMode'))                  || ... % ??? (numeric)
+                         (my_strncmp(test_varname, 'CameraBasedMotionCorrection'))  || ... % ??? (numeric)
+                         (my_strncmp(test_varname, 'i')) )        % int (numeric)
                     fields = {fields{:}, varname, str2double(stub)};
                     
-                elseif ( (strncmp(test_varname, 'ush'                   , 3))    || ... % unsigned short (hex)
-                         (strncmp(test_varname, 'b'                     , 1 ))   || ... % bool (numeric, sometimes hex)
-                         (strncmp(test_varname, 'ul'                    , 2))    || ... % unsigned long (hex)
-                         (strncmp(test_varname, 'ui'                    , 2))    || ... % unsigned int (hex)
-                         (strncmp(test_varname, 'un'                    , 2))    || ... % unsigned value (hex)
-                         (strncmp(test_varname, 'UseDouble'             , 9))    || ... % unsigned value (hex)
-                         (strncmp(test_varname, 'Ignore'                , 6))    || ... % unsigned value (hex)
-                         (strncmp(test_varname, 'Size1'                 , 5))    || ... % unsigned value (hex)
-                         (strncmp(test_varname, 'Size2'                 , 5))    || ... % unsigned value (hex)
-                         (strncmp(test_varname, 'uc'                    , 2)) )         % unsigned char (hex)
+                elseif ( (my_strncmp(test_varname, 'ush'))                          || ... % unsigned short (hex)
+                         (my_strncmp(test_varname, 'b'))                            || ... % bool (numeric, sometimes hex)
+                         (my_strncmp(test_varname, 'ul'))                           || ... % unsigned long (hex)
+                         (my_strncmp(test_varname, 'ui'))                           || ... % unsigned int (hex)
+                         (my_strncmp(test_varname, 'un'))                           || ... % unsigned value (hex)
+                         (my_strncmp(test_varname, 'UseDouble'))                    || ... % unsigned value (hex)
+                         (my_strncmp(test_varname, 'Ignore'))                       || ... % unsigned value (hex)
+                         (my_strncmp(test_varname, 'Size1'))                        || ... % unsigned value (hex)
+                         (my_strncmp(test_varname, 'Size2'))                        || ... % unsigned value (hex)
+                         (my_strncmp(test_varname, 'uc')) )                                % unsigned char (hex)
                     fields = {fields{:}, varname, getHexVal(stub)};
                     
-                elseif ( (strncmp(test_varname, 't'                     , 1 ))   || ... % text string
-                         (strncmp(test_varname, 's'                     , 1 ))   || ... % text string
-                         (strncmp(test_varname, 'ZZMatrixVectorUUID'    , 18)) )        % string (UUID)
+                elseif ( (my_strncmp(test_varname, 't'))                            || ... % text string
+                         (my_strncmp(test_varname, 's'))                            || ... % text string
+                         (my_strncmp(test_varname, 'ZZMatrixVectorUUID')) )                % string (UUID)
                     fields = {fields{:}, varname, getQuotString(stub)};
                     
                 elseif ( (old_version) && (strcmp(test_varname, 'SecUserToken')) )
@@ -185,6 +192,13 @@ end
 
 telapsed = toc(tstart);
 fprintf('   ** parse_mrprot completed in %.3f s\n', telapsed);
+
+%--------------------------------------------------------------------------
+
+function count = my_strncmp(inStr, testStr)
+% strncmp variant that tests the exact length of the test string
+
+count = strncmp(inStr, testStr, length(testStr));
 
 %--------------------------------------------------------------------------
 
