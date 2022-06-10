@@ -3,6 +3,10 @@ function mrprot = parse_mrprot(arr)
 %   E. Auerbach, CMRR, Univ. of Minnesota, 2016
 %    some changes by Steven Baete, NYU LMC CBI, 2013 (SB)
 
+version = '2018.11.08';
+
+fprintf('   ** parse_mrprot version %s started (%d bytes input)\n', version, numel(arr));
+
 tstart = tic;
 
 % isolate the meas.asc portion only (strip the meas.evp part if present)
@@ -36,6 +40,13 @@ for curline=1:numlines
         
         % first, take the variable name -- everything before the '='
         [varname, stub] = strtok(line, '=');
+        
+        % sDiffusion.sFreeDiffusionData.sComment.NNN is an oddball case introduced in
+        % since VE11 or so; convert to []
+        if (strncmp(varname, 'sDiffusion.sFreeDiffusionData.sComment.', 39))
+            varname = [strtrim(varname) ']'];
+            varname(39) = '[';
+        end
         
         % break it down into levels delimited by '.'
         varnamearr = textscan(varname, '%s', 'delimiter', '.');
@@ -119,6 +130,9 @@ for curline=1:numlines
                          (strncmp(test_varname, 'aul'                   , 3 )) )        % array of unsigned long (hex)
                     fields = {fields{:}, varname, {idx1, idx2}, getHexVal(stub)};
                     
+                elseif ( (strncmp(test_varname, 'sComment'              , 8 )) )        % array of chars (hex)
+                    fields = {fields{:}, varname, {idx2, idx1}, char(getHexVal(stub))};
+                    
                 elseif   (strncmp(test_varname, 'at'                    , 2 ))          % array of text strings
                     fields = {fields{:}, varname, {idx1, idx2}, cellstr(getQuotString(stub))};
                     
@@ -126,7 +140,6 @@ for curline=1:numlines
                          (strncmp(test_varname, 'l'                     , 1 ))   || ... % long value (signed) (numeric)
                          (strncmp(test_varname, 'd'                     , 1 ))   || ... % double value (numeric)
                          (strncmp(test_varname, 'n'                     , 1 ))   || ... % signed value (long?) (numeric)
-                         (strncmp(test_varname, 'b'                     , 1 ))   || ... % bool (numeric)
                          (strncmp(test_varname, 'e'                     , 1 ))   || ... % enum (long?) (numeric)
                          (strncmp(test_varname, 'WorstCase'             , 9 ))   || ... % float
                          (strncmp(test_varname, 'Nucleus'               , 7 ))   || ... % float
@@ -139,6 +152,7 @@ for curline=1:numlines
                     fields = {fields{:}, varname, str2double(stub)};
                     
                 elseif ( (strncmp(test_varname, 'ush'                   , 3))    || ... % unsigned short (hex)
+                         (strncmp(test_varname, 'b'                     , 1 ))   || ... % bool (numeric, sometimes hex)
                          (strncmp(test_varname, 'ul'                    , 2))    || ... % unsigned long (hex)
                          (strncmp(test_varname, 'ui'                    , 2))    || ... % unsigned int (hex)
                          (strncmp(test_varname, 'un'                    , 2))    || ... % unsigned value (hex)
@@ -248,8 +262,7 @@ function hval = getHexVal(text)
 % gets C++ style hexadecimal value from a text string
 %  (assumes nothing follows the hex string)
 
-hexst = strfind(text,'0x');
-if (~isempty(hexst))
+if (my_contains(text,'0x'))
     tmp = text(strfind(text,'0x')+2:end);
     hval = hex2dec(tmp);
 else
@@ -266,7 +279,7 @@ function [lines, numlines] = mgetl(arr)
 arr = char(arr);
 if (size(arr,1) > size(arr,2)), arr = arr'; end
 arr_len = length(arr);
-lf = strfind(arr, char(10));
+lf = strfind(arr, char(10)); %#ok<CHARTEN>
 numlines = length(lf);
 if (lf(numlines) < arr_len)
     numlines = numlines + 1;
@@ -298,7 +311,7 @@ tagStr = strtrim(tagStr);
 
 if (isempty(tagStr)) %SB
     tagStr = 'x';
-end;
+end
 
 if (isletter(tagStr(1)))
     stvar = tagStr;
@@ -306,6 +319,19 @@ else
     stvar = strcat('x', tagStr);
 end
 
-if strfind(stvar, ';'), stvar = strrep(stvar, ';', '_'); end
-if strfind(stvar, '@'), stvar = strrep(stvar, '@', '_'); end % VD13
-if strfind(stvar, '-'), stvar = strrep(stvar, '-', '_'); end % (SB)
+if my_contains(stvar, ';'), stvar = strrep(stvar, ';', '_'); end
+if my_contains(stvar, '@'), stvar = strrep(stvar, '@', '_'); end % VD13
+if my_contains(stvar, '-'), stvar = strrep(stvar, '-', '_'); end % (SB)
+
+%--------------------------------------------------------------------------
+
+function TF = my_contains(str,pattern)
+% eja: version compatibility wrapper for contains function:
+% TF = contains(str,pattern) returns 1 (true) if str contains the
+% specified pattern, and returns 0 (false) otherwise.
+
+if exist('contains','builtin')
+    TF = contains(str,pattern);
+else
+    TF = ~isempty(strfind(str,pattern)); %#ok<STREMP>
+end

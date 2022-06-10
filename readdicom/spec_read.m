@@ -1,7 +1,11 @@
-function [fid, dcmInfo] = spec_read(dn)
+function [fid, dcmInfo] = spec_read(dn, debug)
 % function to read spectroscopy data from siemens dicom .ima/.dcm files
 %   usage: [fid, dcmInfo] = spec_read(dn)
 %   arguments dn = filename
+
+version = '2021.07.27';
+
+if (nargin == 1), debug = false; end
 
 dcmInfo = dicominfo(dn);
 
@@ -9,8 +13,11 @@ dcmInfo = dicominfo(dn);
 % in this case, startofpixeldata is not supplied, so test for that
 
 found_data = 0;
+is_conj = false;
 if isfield(dcmInfo,'StartOfPixelData')
     % this is old dicominfo, so we have to read pixel data ourselves
+    if (debug), fprintf('spec_read: version %s reading old style pixel data\n', version); end
+    found_data = -101;
     startpos = double(dcmInfo.StartOfPixelData);
     endpos = double(dcmInfo.FileSize);
 
@@ -54,35 +61,67 @@ if isfield(dcmInfo,'StartOfPixelData')
     fclose(fp);
 
     if isfield(dcmData,'Data_7FE1_0010')
+        found_data = -102;
         data_ver = char(dcmData.Data_7FE1_0010)';
         if (strcmp(deblank(data_ver),'SIEMENS CSA NON-IMAGE'))
             raw = dcmData.Data_7FE1_1010;
             found_data = 1;
         end
     end
-else
+elseif isfield(dcmInfo,'Private_7fe1_10xx_Creator')
     % this is new dicominfo, so the pixels are already in dcmInfo (yay)
     % but we must convert uint8 to single/float32 (boo)
-    if isfield(dcmInfo,'Private_7fe1_10xx_Creator')
-        data_ver = char(dcmInfo.Private_7fe1_10xx_Creator);
-        if (strcmp(deblank(data_ver),'SIEMENS CSA NON-IMAGE'))
-            raw = dcmInfo.Private_7fe1_1010;
-            np = size(raw,1) / 4;
-
-            % dump unit8 data to a temp file
-            tmp_fn = tempname;
-            % open it using little endian ordering, so this should work on any machine
-            fp = fopen(tmp_fn,'w+','ieee-le');
-            fwrite(fp,raw);
-            frewind(fp);
-            raw = fread(fp,np,'*float32');
-            fclose(fp);
-            delete(tmp_fn);
-            found_data = 1;
+    if (debug), fprintf('spec_read: version %s reading new style pixel data\n', version); end
+    found_data = -201;
+    data_ver = char(dcmInfo.Private_7fe1_10xx_Creator);
+    if (strcmp(deblank(data_ver),'SIEMENS CSA NON-IMAGE'))
+        raw = dcmInfo.Private_7fe1_1010;
+        np = size(raw,1) / 4;
+        
+        % dump unit8 data to a temp file
+        tmp_fn = tempname;
+        % open it using little endian ordering, so this should work on any machine
+        fp = fopen(tmp_fn,'w+','ieee-le');
+        fwrite(fp,raw);
+        frewind(fp);
+        raw = fread(fp,np,'*float32');
+        fclose(fp);
+        delete(tmp_fn);
+        found_data = 1;
+    end
+elseif isfield(dcmInfo,'SpectroscopyData')
+    % this is DICOM spectroscopy format
+    if (debug), fprintf('spec_read: version %s reading DICOM spectroscopy format data (conj)\n', version); end
+    found_data = -301;
+    if isfield(dcmInfo,'MRSpectroscopyAcquisitionType')
+        found_data = -302;
+        acq_type = char(dcmInfo.MRSpectroscopyAcquisitionType);
+        if (strcmp(deblank(acq_type),'SINGLE_VOXEL'))
+            found_data = -303;
+            if isfield(dcmInfo,'DataRepresentation')
+                found_data = -304;
+                data_type = char(dcmInfo.DataRepresentation);
+                if (strcmp(deblank(data_type),'COMPLEX'))
+                    found_data = -305;
+                    if isfield(dcmInfo,'SignalDomainColumns')
+                        found_data = -306;
+                        col_type = char(dcmInfo.SignalDomainColumns);
+                        if (strcmp(deblank(col_type),'TIME'))
+                            raw = dcmInfo.SpectroscopyData;
+                            found_data = 1;
+                            is_conj = true; % stored as complex conjugate
+                        end
+                    end
+                end
+            end
         end
     end
 end
 
-if (found_data == 0), error('spec_read ERROR: Spectroscopy raw data not found within PixelData!'); end
+if (found_data ~= 1), error('spec_read version %s ERROR: Spectroscopy raw data not found (code %d)!', version, found_data); end
 
-fid = complex(raw(1:2:end),raw(2:2:end));
+if (is_conj)
+    fid = complex(raw(1:2:end),-raw(2:2:end));
+else
+    fid = complex(raw(1:2:end),raw(2:2:end));
+end
