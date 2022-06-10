@@ -58,7 +58,7 @@ for nbdir=1:size(P,1)
             spec_info(found).TI = mrprot.sSpecPara.lAcquisitionDelay/1000;
         end
         if isfield(mrprot,'sWiPMemBlock')
-            if length( mrprot.sWiPMemBlock.alFree)>25
+            %if length( mrprot.sWiPMemBlock.alFree)>25
                 if isfield(mrprot,'adFlipAngleDegree')
                     if length(mrprot.adFlipAngleDegree)>=2
                         spec_info(found).Exite_angle = mrprot.adFlipAngleDegree(1);
@@ -77,7 +77,7 @@ for nbdir=1:size(P,1)
                     end
                 end
                 
-            end
+            %end
         end
         
         spec_info(found).TR =  mrprot.alTR;
