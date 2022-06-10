@@ -13,6 +13,7 @@ ext6 = '.DIC';
 found = 0;
 
 files = [dir([dn '/*' ext]) ; dir([dn '/*' ext2]) ; dir([dn '/*' ext3]) ; dir([dn '/*' ext4]); dir([dn '/*' ext5]); dir([dn '/*' ext6])];
+
 %[~, sidx] = sort(cellstr(char(files.name)))
 [~, sidx] = natsortfiles({files.name});
 
