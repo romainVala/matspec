@@ -112,7 +112,7 @@ elseif isfield(dcmInfo,'SpectroscopyData')
                             is_conj = true; % stored as complex conjugate
                             if isfield(dcmInfo,'NumberOfFrames')
                                 raw = reshape(raw,dcmInfo.DataPointColumns.*2,dcmInfo.NumberOfFrames);
-                                fid = complex(raw(1:2:end,:),-raw(2:2:end,:));
+                                fid = conj(complex(raw(1:2:end,:),-raw(2:2:end,:))) ; 
                                 return
                             end
                             

@@ -21,7 +21,9 @@ ext6 = '.DIC';
 found = 0;
 
 files = [dir([dn '/*' ext]) ; dir([dn '/*' ext2]) ; dir([dn '/*' ext3]) ; dir([dn '/*' ext4]); dir([dn '/*' ext5]); dir([dn '/*' ext6])];
-[~, sidx] = sort(cellstr(char(files.name)));
+%[~, sidx] = sort(cellstr(char(files.name)));
+[~, sidx] = natsortfiles({files.name});
+
 files = files(sidx);
 
 % clear out any dot files or duplicates if present
@@ -58,7 +60,13 @@ for x=1:size(files,1)
                 [inFid, inInfo] = spec_read(fullfile(dn,tmp),(found==1));
                 if (found == 1)     % first time through, preallocate arrays
                     fprintf('spec_read_all: reading file 1     ')
-                    fid = complex(zeros(size(inFid,1),size(files,1)));
+                    if size(inFid,2)>1
+                        found4D = 1;
+                         fprintf(' WARNING This is a 4D format      ')
+                    else
+                        fid = complex(zeros(size(inFid,1),size(files,1)));
+                        found4D=0;
+                    end
                     dcmInfo_arr(size(files,1)) = inInfo; %#ok<AGROW>
                 end
                 dcmInfo_arr(found) = inInfo; %#ok<AGROW>
@@ -70,15 +78,24 @@ for x=1:size(files,1)
                         inFid = complex(real(inFid)*adj,imag(inFid)*-adj);
                     end
                 end
-
-                fid(:,found) = inFid;
+                if found4D 
+                    if found == 1
+                        fid = inFid;
+                    else
+                        fid = [fid, inFid];
+                    end
+                else
+                    fid(:,found) = inFid;
+                end
             end
         end
     end
 end
 
-% truncate array if necessary
-fid = fid(:,1:found);
+if found4D==0
+    % truncate array if necessary
+    fid= fid(:,1:found);
+end
 
 if (found > 0)
     fprintf('\nspec_read_all: loaded %d trace',found)
