@@ -92,7 +92,7 @@ fo = cat(2,f1_1,f2_1,f1_2,f2_2);
 
 function ok = compare_pos(p1,p2)
 
-ok = all(p1.VoiFOV==p2.VoiFOV) & all(p1.VoiOrientation==p2.VoiOrientation) & all(p1.VoiPosition==p2.VoiPosition) ;
+ok = all(p1.VoiFOV==p2.VoiFOV) & all(p1.VoiOrientation==p2.VoiOrientation) %& compare_pos(p1.VoiPosition==p2.VoiPosition) ;
 
 %_______________________________________________________________________________________________
 function ok = compare_ws(i1,i2)
