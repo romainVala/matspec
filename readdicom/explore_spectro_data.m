@@ -62,27 +62,29 @@ for nbdir=1:size(P,1)
             spec_info(found).TI = mrprot.sSpecPara.lAcquisitionDelay/1000;
         end
         if isfield(mrprot,'sWiPMemBlock')
-            if length( mrprot.sWiPMemBlock.alFree)>25
-                if isfield(mrprot,'adFlipAngleDegree')
-                    if length(mrprot.adFlipAngleDegree)>=2
-                        spec_info(found).Exite_angle = mrprot.adFlipAngleDegree(1);
-                        spec_info(found).Refocus_angle = mrprot.adFlipAngleDegree(2);
-                        spec_info(found).rf_exc_Volt = 0;
-                        if isfield(mrprot.sTXSPEC.aRFPULSE(1),'flAmplitude'), spec_info(found).rf_exc_Volt = mrprot.sTXSPEC.aRFPULSE(1).flAmplitude; end
-                        spec_info(found).rf_ref_Volt = 0;
-                        if isfield(mrprot.sTXSPEC.aRFPULSE(2),'flAmplitude'), spec_info(found).rf_ref_Volt = mrprot.sTXSPEC.aRFPULSE(2).flAmplitude; end
-                        spec_info(found).reference_Volt = mrprot.sTXSPEC.asNucleusInfo(1).flReferenceAmplitude;
-                        spec_info(found).Refocus_pulse_dur = mrprot.sWiPMemBlock.alFree(2);
-                        spec_info(found).Exite_pulse_dur = mrprot.sWiPMemBlock.alFree(25);
-                        
-                        spec_info(found).real_ref_FA = spec_info(found).rf_ref_Volt * 180 ./(spec_info(found).reference_Volt * ...
-                            1000/spec_info(found).Refocus_pulse_dur * 400/36.711385);
-                        
-                        spec_info(found).real_ext_FA = spec_info(found).rf_exc_Volt * 180 ./(spec_info(found).reference_Volt * ...
-                            1000/spec_info(found).Exite_pulse_dur * 400/45.490761 );
+            if isfield(mrprot.sWiPMemBlock, 'alFree')
+                if length( mrprot.sWiPMemBlock.alFree)>25
+                    if isfield(mrprot,'adFlipAngleDegree')
+                        if length(mrprot.adFlipAngleDegree)>=2
+                            spec_info(found).Exite_angle = mrprot.adFlipAngleDegree(1);
+                            spec_info(found).Refocus_angle = mrprot.adFlipAngleDegree(2);
+                            spec_info(found).rf_exc_Volt = 0;
+                            if isfield(mrprot.sTXSPEC.aRFPULSE(1),'flAmplitude'), spec_info(found).rf_exc_Volt = mrprot.sTXSPEC.aRFPULSE(1).flAmplitude; end
+                            spec_info(found).rf_ref_Volt = 0;
+                            if isfield(mrprot.sTXSPEC.aRFPULSE(2),'flAmplitude'), spec_info(found).rf_ref_Volt = mrprot.sTXSPEC.aRFPULSE(2).flAmplitude; end
+                            spec_info(found).reference_Volt = mrprot.sTXSPEC.asNucleusInfo(1).flReferenceAmplitude;
+                            spec_info(found).Refocus_pulse_dur = mrprot.sWiPMemBlock.alFree(2);
+                            spec_info(found).Exite_pulse_dur = mrprot.sWiPMemBlock.alFree(25);
+                            
+                            spec_info(found).real_ref_FA = spec_info(found).rf_ref_Volt * 180 ./(spec_info(found).reference_Volt * ...
+                                1000/spec_info(found).Refocus_pulse_dur * 400/36.711385);
+                            
+                            spec_info(found).real_ext_FA = spec_info(found).rf_exc_Volt * 180 ./(spec_info(found).reference_Volt * ...
+                                1000/spec_info(found).Exite_pulse_dur * 400/45.490761 );
+                        end
                     end
+                    
                 end
-                
             end
         end
         
