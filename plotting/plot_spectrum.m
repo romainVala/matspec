@@ -58,7 +58,7 @@ for nbser = 1:length(spec_info)
     end
     
     
-    if ~isempty(findstr(info.seqname,'mega')) | ~isempty(findstr(info.seqname,'mslaser'))
+    if ~isempty(findstr(info.seqname,'mega')) | ~isempty(findstr(info.seqname,'mslaser')) | ~isempty(findstr(info.seqname,'_edit'))
         %fid1 = transpose(fid(:,1:(info.Number_of_spec)/2));
         %fid2 = transpose(fid(:,(info.Number_of_spec/2+1):end));
         
