@@ -110,12 +110,18 @@ elseif isfield(dcmInfo,'SpectroscopyData')
                             raw = dcmInfo.SpectroscopyData;
                             found_data = 1;
                             is_conj = true; % stored as complex conjugate
+                            if isfield(dcmInfo,'NumberOfFrames')
+                                raw = reshape(raw,dcmInfo.DataPointColumns.*2,dcmInfo.NumberOfFrames);
+                                fid = complex(raw(1:2:end,:),-raw(2:2:end,:));
+                                return
+                            end
+                            
                         end
                     end
                 end
             end
         end
-    end
+    end   
 end
 
 if (found_data ~= 1), error('spec_read version %s ERROR: Spectroscopy raw data not found (code %d)!', version, found_data); end
