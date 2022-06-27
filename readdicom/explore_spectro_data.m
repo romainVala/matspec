@@ -115,7 +115,7 @@ for nbdir=1:size(P,1)
         if isfield(mrprot.sProtConsistencyInfo,'flNominalB0')
             spec.magfield = mrprot.sProtConsistencyInfo.flNominalB0;% magnetic field (2.8936 T)
         else
-            if (strcmp(dcm.ResonantNucleus,'1H')), spec.magfield = dcm.TransmitterFrequency/42.58; end
+            if (strcmp(dcm(1).ResonantNucleus,'1H')), spec.magfield = dcm(1).TransmitterFrequency/42.58; end
         end
         spec.SW_h=1e9/(serhdr.ReadoutOS * mrprot.sRXSPEC.alDwellTime(1));% spectral width in Hz
         spec.SW_p=spec.SW_h/spec.cenfreq;			% spectral width in ppm
