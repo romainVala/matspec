@@ -4,7 +4,7 @@ function [fid, dcmInfo_arr] = spec_read_all(dn, sortmethod)
 %   usage: [fid, dcmInfo_arr] = spec_read_all(dn, [sort])
 %   arguments dn = filename, [sort 0=Filename/Alphabetical, 1=InstanceNumber]
 
-version = '2021.07.27';
+version = '2022.06.15';
 
 fprintf('spec_read_all.m version %s started\n', version)
 
@@ -21,20 +21,24 @@ ext6 = '.DIC';
 found = 0;
 
 files = [dir([dn '/*' ext]) ; dir([dn '/*' ext2]) ; dir([dn '/*' ext3]) ; dir([dn '/*' ext4]); dir([dn '/*' ext5]); dir([dn '/*' ext6])];
-%[~, sidx] = sort(cellstr(char(files.name)));
-[~, sidx] = natsortfiles({files.name});
+[~, sidx] = sort(cellstr(char(files.name)));
+files = files(sidx);
 
-% clear out any leading dot files if present
-founddotfiles = 0;
+% clear out any dot files or duplicates if present
+foundbadfiles = 0;
 for x=1:size(files,1)
     if (files(x).name(1) == '.')
-        founddotfiles = founddotfiles + 1;
-    elseif (founddotfiles)
-        break;
+        files(x).name = '';
+        foundbadfiles = foundbadfiles + 1;
+    elseif (x<size(files,1)) && (strcmp(files(x+1).name,files(x).name))
+        files(x).name = '';
+        foundbadfiles = foundbadfiles + 1;
     end
 end
-if (founddotfiles)
-    files = files(founddotfiles+1:end);
+if (foundbadfiles)
+    [~, sidx] = sort(cellstr(char(files.name)));
+    files = files(sidx);
+    files = files(foundbadfiles+1:end);
 end
 
 fprintf('spec_read_all: searching %s\nspec_read_all: found %d candidate filenames\n',dn,size(files,1))
@@ -77,7 +81,9 @@ end
 fid = fid(:,1:found);
 
 if (found > 0)
-    fprintf('\nspec_read_all: loaded %d traces\n',found)
+    fprintf('\nspec_read_all: loaded %d trace',found)
+    if (found > 1), fprintf('s'); end
+    fprintf('\n');
 else
     error('ERROR: no spectra found!')
 end

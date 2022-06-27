@@ -8,7 +8,7 @@ function [img, ser, mrprot] = parse_siemens_shadow(varargin)
 %                  mread.m
 %   E. Auerbach, CMRR, Univ. of Minnesota, 2022
 
-version = '2022.04.01 ''The April Fool''';
+version = '2022.06.15';
 
 fprintf('   ** parse_siemens_shadow version %s started\n', version);
 
@@ -37,6 +37,11 @@ elseif isfield(dcm,'Private_0021_12xx_Creator')
     % new XA image data
     ver_string = private_field_str_fix(dcm.Private_0021_12xx_Creator);
     csa_string = '';
+elseif isfield(dcm,'MRSpectroscopyAcquisitionType')
+    ver_string = dcm.MRSpectroscopyAcquisitionType;
+    csa_string = '';
+else
+    error('could not determine data format, please contact E. Auerbach');
 end
 
 haveCSAhdr = false;
@@ -63,7 +68,7 @@ elseif (strcmp(ver_string,'SPEC NUM 4'))
     else
         error('shadow: Invalid CSA HEADER identifier: %s',csa_string);
     end
-elseif (strcmp(ver_string,'SIEMENS MR MRS 05') || strcmp(ver_string,'SIEMENS MR SDR 01'))
+elseif (strcmp(ver_string,'SIEMENS MR MRS 05') || strcmp(ver_string,'SIEMENS MR SDR 01') || strcmp(ver_string,'SINGLE_VOXEL'))
     % XA MR formats use "standard" DICOM private format fields, not CSA headers
     img = parse_private_func(dcm.PerFrameFunctionalGroupsSequence.Item_1);
     ser = parse_private_func(dcm.SharedFunctionalGroupsSequence.Item_1);
@@ -187,7 +192,8 @@ if (strncmp(codeName, 'Private_0021_11', 15))
     end
 elseif (strncmp(codeName, 'Private_0021_10', 15))
     hdrType = hdrCreators.Private_0021_10xx_Creator;
-    if (~strcmp(hdrType,'SIEMENS MR SDS 01'))
+    % this normally should be series header, but can be 'SIEMENS MR SDI 02' in spectroscopy data!
+    if ((~strcmp(hdrType,'SIEMENS MR SDS 01')) && (~strcmp(hdrType,'SIEMENS MR SDI 02')))
         error('ERROR: expecting 0021,10xx to be series 01 shadow header, found %s', hdrType);
     end
 elseif (strncmp(codeName, 'Private_0021_14', 15))
