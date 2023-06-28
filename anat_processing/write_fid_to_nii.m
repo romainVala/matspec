@@ -43,6 +43,10 @@ for k=1:length(fids)
     pos = CSIdata.pos; %position of the upper left corner of the voxel!!
     %pos = pos + [vox(1)/2;vox(2)/2;-vox(3)/2]; %position of the center of the voxel
     %CSIdata.pos = pos;
+    if isstruct(pos)
+        pos = [pos.dSag, pos.dCor, pos.dTra]';
+    end
+    
     dicom_to_patient = [orient*diag(vox) pos ; 0 0 0 1];
     patient_to_tal   = diag([-1 -1 1 1]);
     % warning('Don''t know exactly what positions in spectroscopy files should be - just guessing!')
