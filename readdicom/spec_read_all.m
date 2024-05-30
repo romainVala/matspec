@@ -23,10 +23,10 @@ found = 0;
 files = [dir([dn '/*' ext]) ; dir([dn '/*' ext2]) ; dir([dn '/*' ext3]) ; dir([dn '/*' ext4]); dir([dn '/*' ext5]); dir([dn '/*' ext6])];
 %[~, sidx] = sort(cellstr(char(files.name)));
 [~, sidx] = natsortfiles({files.name});
-
-files = files(sidx);
+%rrr files = files(sidx);
 
 % clear out any dot files or duplicates if present
+% rrr commented
 foundbadfiles = 0;
 for x=1:size(files,1)
     if (files(x).name(1) == '.')
@@ -53,6 +53,7 @@ for x=1:size(files,1)
     idx = sidx(x);
     if (~files(idx).isdir)
         tmp = files(idx).name;
+        %fprintf('Reading file %s\n',tmp)
         if (size(tmp,2) > 4)
             if ( strcmpi(tmp(end-3:end),ext) || strcmpi(tmp(end-3:end),ext3) || strcmpi(tmp(end-3:end),ext6) )
                 found = found + 1;
