@@ -23,7 +23,7 @@ if ~isfield(par,'correct_to_ref_metab'),par.correct_to_ref_metab =1; end
 
 if ~isfield(par,'correct_diff_phase'),par.correct_diff_phase =0; end
 
-
+if ~isfield(par,'mega_separate_edit'), par.mega_separate_edit = 0; end  %if 0 process edit and editoff in one step otherwise process each separatly
 if ~isfield(par,'figure'), par.figure=1;     end
 
 if ~isfield(par,'process_diff_only'), par.process_diff_only=0;     end
@@ -59,7 +59,10 @@ for nb_spec = 1:length(fid_struct)
     %  fid3 = transpose(fid(:,size_mid+1:end));
     fid2 = permute(fid(:,1:size_mid),[2 1]);
     fid3 = permute(fid(:,size_mid+1:end),[2 1]);
-    
+
+    %used if mega_separate_edit == 0
+    fidall = permute(fid(:,1:size(fid,2)),[2 1]); %fb
+
     % performing frequency and phase correction
     
     switch par.method
@@ -85,29 +88,60 @@ for nb_spec = 1:length(fid_struct)
                 
                 
             else
-                
-                [sum2 fid2_cor phase_cor1 freq_cor1 ] = add_array_scans_bis_Cre(fid2,SW_h,SW_p,ppm_center,par,fid_struct(nb_spec));
-                [sum3 fid3_cor phase_cor2 freq_cor2 ] = add_array_scans_bis_Cre(fid3,SW_h,SW_p,ppm_center,par,fid_struct(nb_spec));
-                %    fid_cor(nb_spec) = [transpose(fid2_cor) transpose(fid3_cor)];
+                if par.mega_separate_edit
+                    
+                    [sum2 fid2_cor phase_cor1 freq_cor1 ] = add_array_scans_bis_Cre(fid2,SW_h,SW_p,ppm_center,par,fid_struct(nb_spec));
+                    [sum3 fid3_cor phase_cor2 freq_cor2 ] = add_array_scans_bis_Cre(fid3,SW_h,SW_p,ppm_center,par,fid_struct(nb_spec));
+                    %    fid_cor(nb_spec) = [transpose(fid2_cor) transpose(fid3_cor)];
+                    
+                    spec_cor(nb_spec).fid = [permute(fid2_cor,[2 1]) permute(fid3_cor,[2 1])];
+                else %all in one
+                    [sumall fidall_cor phase_cor freq_cor ] = add_array_scans_bis_Cre(fidall,SW_h,SW_p,ppm_center,par,fid_struct(nb_spec)); %fb
 
-                spec_cor(nb_spec).fid = [permute(fid2_cor,[2 1]) permute(fid3_cor,[2 1])];
+                    spec_cor(nb_spec).fid = [permute(fidall_cor,[2 1])]; %fb
+                    
+                    fidall_cor = [permute(fidall_cor,[2 1])]; %fb
+                    
+                    fid2_cor = fidall_cor(:,1:size_mid); %fb
+                    fid3_cor = fidall_cor(:,size_mid+1:end); %fb
+                    
+                    sum2=permute(sum(fid2_cor, 2),[2 1]);    sum3=permute(sum(fid3_cor, 2),[2 1]);
 
+                end
             end
             
         case 'correlation'
+            if par.mega_separate_edit
+                
+                [fid2_cor phase_cor1 freq_cor1 ] = correct_freq_and_phase_by_correlation(permute(fid2,[2 1]),par,fid_struct(nb_spec));
+                [fid3_cor phase_cor2 freq_cor2 ] = correct_freq_and_phase_by_correlation(permute(fid3,[2 1]),par,fid_struct(nb_spec));
+                spec_cor(nb_spec).fid = [fid2_cor , fid3_cor];
+                sum2=permute(sum(fid2_cor,2),[2 1]);sum3=permute(sum(fid3_cor,2),[2 1]);
             
-            [fid2_cor phase_cor1 freq_cor1 ] = correct_freq_and_phase_by_correlation(permute(fid2,[2 1]),par,fid_struct(nb_spec));
-            [fid3_cor phase_cor2 freq_cor2 ] = correct_freq_and_phase_by_correlation(permute(fid3,[2 1]),par,fid_struct(nb_spec));
-            spec_cor(nb_spec).fid = [fid2_cor , fid3_cor];
-            sum2=permute(sum(fid2_cor,2),[2 1]);sum3=permute(sum(fid3_cor,2),[2 1]);
-            
+            else
+                
+                [fidall_cor phase_cor freq_cor ] = correct_freq_and_phase_by_correlation(permute(fidall,[2 1]),par,fid_struct(nb_spec)); %fb
+                spec_cor(nb_spec).fid = [fidall_cor]; %fb
+                
+                fid2_cor = fidall_cor(:,1:size_mid); %fb
+                fid3_cor = fidall_cor(:,size_mid+1:end); %fb
+                
+                sum2=permute(sum(fid2_cor,2),[2 1]);    sum3=permute(sum(fid3_cor,2),[2 1]);
+
+            end
     end
     
-    
-    spec_cor(nb_spec).phase_cor = [phase_cor1', phase_cor2'];
-    spec_cor(nb_spec).freq_cor =  [freq_cor1(1:end-2)', freq_cor2(1:end-2)'];
-    spec_cor(nb_spec).max_freq_shift = max(spec_cor(nb_spec).freq_cor) -min(spec_cor(nb_spec).freq_cor);
-    
+    if par.mega_separate_edit
+        
+        spec_cor(nb_spec).phase_cor = [phase_cor1', phase_cor2'];
+        spec_cor(nb_spec).freq_cor =  [freq_cor1(1:end-2)', freq_cor2(1:end-2)'];
+        spec_cor(nb_spec).max_freq_shift = max(spec_cor(nb_spec).freq_cor) -min(spec_cor(nb_spec).freq_cor);
+    else
+        spec_cor(nb_spec).phase_cor = [phase_cor'];
+        spec_cor(nb_spec).freq_cor =  [freq_cor(1:end-2)'];
+        spec_cor(nb_spec).max_freq_shift = max(spec_cor(nb_spec).freq_cor) -min(spec_cor(nb_spec).freq_cor);
+        
+    end
     
     if par.correct_diff_phase 		% correction of phase of difference spectrum
         dif_fid=sum3-sum2;
@@ -121,6 +155,7 @@ for nb_spec = 1:length(fid_struct)
         spectrum_dif_fid=fftshift(fft(dif_fid));
         
         phase_test=(-0.5:0.01:0.5);
+        phase_test=(-1.0:0.01:1.0);
         
         integral_imag_0=abs(sum(imag(exp(1i*phase_test(1))*spectrum_dif_fid(i_f_inf3:i_f_sup3))));
         phase_index=1;
