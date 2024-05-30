@@ -23,7 +23,7 @@ if ~isfield(par,'correct_to_ref_metab'),par.correct_to_ref_metab =1; end
 
 if ~isfield(par,'correct_diff_phase'),par.correct_diff_phase =0; end
 
-if ~isfield(par,'mega_separate_edit'), par.mega_separate_edit = 0; end  %if 0 process edit and editoff in one step otherwise process each separatly
+if ~isfield(par,'mega_separate_edit'), par.mega_separate_edit = 1; end  %if 0 process edit and editoff in one step otherwise process each separatly
 if ~isfield(par,'figure'), par.figure=1;     end
 
 if ~isfield(par,'process_diff_only'), par.process_diff_only=0;     end
