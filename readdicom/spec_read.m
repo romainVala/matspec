@@ -13,7 +13,7 @@ dcmInfo = dicominfo(dn);
 % in this case, startofpixeldata is not supplied, so test for that
 
 found_data = 0;
-is_conj = false;
+is_conj = false; %rrr previously to false
 if isfield(dcmInfo,'StartOfPixelData')
     % this is old dicominfo, so we have to read pixel data ourselves
     if (debug), fprintf('spec_read: version %s reading old style pixel data\n', version); end
@@ -110,11 +110,11 @@ elseif isfield(dcmInfo,'SpectroscopyData')
                             raw = dcmInfo.SpectroscopyData;
                             found_data = 1;
                             is_conj = true; % stored as complex conjugate
-                            if isfield(dcmInfo,'NumberOfFrames')
-                                raw = reshape(raw,dcmInfo.DataPointColumns.*2,dcmInfo.NumberOfFrames);
-                                fid = conj(complex(raw(1:2:end,:),-raw(2:2:end,:))) ; 
-                                return
-                            end
+%                             if isfield(dcmInfo,'NumberOfFrames')
+%                                 raw = reshape(raw,dcmInfo.DataPointColumns.*2,dcmInfo.NumberOfFrames);
+%                                 fid = conj(complex(raw(1:2:end,:),-raw(2:2:end,:))) ; 
+%                                 return
+%                             end
                             
                         end
                     end
