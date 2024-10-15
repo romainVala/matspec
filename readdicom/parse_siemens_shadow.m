@@ -27,8 +27,13 @@ end
 
 if isfield(dcm,'Private_0029_10xx_Creator')
     % this is the case for most data
-    ver_string = private_field_str_fix(dcm.Private_0029_1008);
-    csa_string = private_field_str_fix(dcm.Private_0029_10xx_Creator);
+    if ~ isfield(dcm,'Private_0029_1008')
+            ver_string = dcm.MRSpectroscopyAcquisitionType;
+            csa_string = '';
+    else
+        ver_string = private_field_str_fix(dcm.Private_0029_1008);
+        csa_string = private_field_str_fix(dcm.Private_0029_10xx_Creator);
+    end
 elseif isfield(dcm,'Private_0021_14xx_Creator')
     % new DICOM MR spectroscopy data
     ver_string = private_field_str_fix(dcm.Private_0021_14xx_Creator);
