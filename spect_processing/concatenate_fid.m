@@ -41,7 +41,7 @@ while length(info)>1
                 keyboard
             end
             
-            if findstr(info_o(io).seqname,'mega');
+            if  contains(info_o(io).seqname, {'mega','msl'}, 'IgnoreCase', true) 
                 info_o(io).fid = cat_mega_fid(info_o(io).fid,info(nf).fid);
             else
                 info_o(io).fid = cat(2,info_o(io).fid,info(nf).fid);
